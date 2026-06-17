@@ -177,7 +177,7 @@ export default function DashboardScreen({ data, matchId, difficulty, onRestart }
   }, [data]);
 
   const handleExportCSV = () => {
-    window.open(`http://localhost:5000/api/export-csv?match_id=${matchId}`, '_blank');
+    window.open(`https://pickleball-backend-h86y.onrender.com/api/export-csv?match_id=${matchId}`, '_blank');
   };
 
   return (

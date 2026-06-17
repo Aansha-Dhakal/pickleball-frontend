@@ -191,7 +191,7 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
     if (winnerSide === 'PLAYER') sfx.playMatchWin();
     else sfx.playPointLose();
     sfx.playCrowd();
-    fetch('http://localhost:5000/api/log-telemetry', {
+    fetch('https://pickleball-backend-h86y.onrender.com/api/log-telemetry', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ match_id: matchId, difficulty, telemetry_events: telemetry.current }),
