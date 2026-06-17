@@ -30,11 +30,13 @@ function calcShot(playerPos, targetX, shotType, aimDepth = 'normal') {
   if (aimDepth === 'deep')  hz = Math.min(hz * 1.25, 40);
   if (aimDepth === 'short') hz = Math.max(hz * 0.7, 8);
 
-  const tToNet     = distToNet / hz;
-  const vy         = (NET_H + netClear - START_Y - 0.5 * GRAVITY * tToNet * tToNet) / tToNet;
-  const totalDist  = distToNet + Math.abs(BOT_START_Z);
-  const dx         = targetX - playerPos.x;
-  const vx         = (dx / totalDist) * hz * 0.4;
+  const tToNet  = distToNet / hz;
+  const vy      = (NET_H + netClear - START_Y - 0.5 * GRAVITY * tToNet * tToNet) / tToNet;
+
+  // vx: direct time-of-flight calculation — no dampening, full power
+  const tFlight = tToNet * 2; // estimated total flight time
+  const vx      = (targetX - playerPos.x) / tFlight;
+
   return { x: vx, y: Math.max(vy, 3), z: -hz };
 }
 
@@ -65,9 +67,9 @@ function GameLogic({
   useFrame((state, delta) => {
     if (!gameActive || !ballRef.current?.isActive()) return;
 
-    const now      = state.clock.elapsedTime;
-    const ballPos  = ballRef.current.getPosition();
-    const ballVel  = ballRef.current.getVelocity();
+    const now       = state.clock.elapsedTime;
+    const ballPos   = ballRef.current.getPosition();
+    const ballVel   = ballRef.current.getVelocity();
     const playerPos = playerRef.current.getPosition();
     const botPos    = botRef.current.getPosition();
 
@@ -109,31 +111,32 @@ function GameLogic({
         return;
       }
 
-      // Shot type
+      // ── SHOT TYPE — read all modifier keys simultaneously ──
+      // Shift = drive, Ctrl = dink, Q = lob, default = normal
+      // These work independently of aim keys (A/D/W/S)
       let shotType = 'normal';
-      if (keys.current['Shift'])                       shotType = 'drive';
-      if (keys.current['Control'])                     shotType = 'dink';
-      if (keys.current['q'] || keys.current['Q'])      shotType = 'lob';
+      if (keys.current['Shift'])                  shotType = 'drive';
+      if (keys.current['Control'])                shotType = 'dink';
+      if (keys.current['q'] || keys.current['Q']) shotType = 'lob';
 
-      // ── SHARP AIM SYSTEM ──
-      // A/D aim: the longer you hold, the more extreme the angle
-      // Max hold = 1.5s → full crosscourt. Default = straight at bot.
-      const MAX_HOLD   = 1.5;   // seconds for full crosscourt
-      const MAX_AIM_X  = COURT_W * 0.42; // max crosscourt X (just inside sideline)
+      // ── AIM — hold time based, fully independent of shot type ──
+      // Tap A/D = slight angle, hold = sharp crosscourt
+      const MAX_HOLD  = 1.2;  // seconds for full crosscourt
+      const HALF_W    = COURT_W * 0.44; // just inside sideline
+      const CENTER_X  = botPos.x;
 
-      let aimX = botPos.x + (Math.random() - 0.5) * 2; // default: toward bot ±1ft
+      let aimX = CENTER_X + (Math.random() - 0.5) * 1.5; // default: straight at bot
 
       if (keys.current['a']) {
-        const holdT  = Math.min(keyHoldTime.current['a'] || 0, MAX_HOLD);
-        const factor = holdT / MAX_HOLD; // 0 = straight, 1 = full crosscourt
-        aimX = -MAX_AIM_X * (0.2 + factor * 0.8); // minimum 20% angle, up to full
+        const t = Math.min(keyHoldTime.current['a'] || 0, MAX_HOLD) / MAX_HOLD;
+        // Linear interpolation: 0 hold = 30% angle, full hold = 100% crosscourt
+        aimX = -HALF_W * (0.3 + t * 0.7);
       } else if (keys.current['d']) {
-        const holdT  = Math.min(keyHoldTime.current['d'] || 0, MAX_HOLD);
-        const factor = holdT / MAX_HOLD;
-        aimX = MAX_AIM_X * (0.2 + factor * 0.8);
+        const t = Math.min(keyHoldTime.current['d'] || 0, MAX_HOLD) / MAX_HOLD;
+        aimX =  HALF_W * (0.3 + t * 0.7);
       }
 
-      // W/S aim depth
+      // W/S = depth control
       let aimDepth = 'normal';
       if (keys.current['w']) aimDepth = 'deep';
       if (keys.current['s']) aimDepth = 'short';
@@ -143,7 +146,7 @@ function GameLogic({
 
       const inKitchenZone = playerPos.z < KITCHEN_DEPTH;
       onShot({
-        striker:  'PLAYER',
+        striker:   'PLAYER',
         shotType,
         shot_type: inKitchenZone && shotType !== 'lob' ? 'DINK' : shotType.toUpperCase(),
         position:  ballPos.clone(),
@@ -184,23 +187,23 @@ function GameLogic({
 
 // ── MAIN ──────────────────────────────────────────────────────────
 export default function GameScreen({ difficulty, matchId, onGameEnd }) {
-  const ballRef   = useRef();
-  const playerRef = useRef();
-  const botRef    = useRef();
-  const keys      = useRef({});
-  const keyHoldTime = useRef({}); // tracks how long each key has been held (seconds)
-  const telemetry = useRef([]);
-  const sfx       = useSoundEffects();
+  const ballRef    = useRef();
+  const playerRef  = useRef();
+  const botRef     = useRef();
+  const keys       = useRef({});
+  const keyHoldTime = useRef({});
+  const telemetry  = useRef([]);
+  const sfx        = useSoundEffects();
 
-  const [playerScore, setPlayerScore] = useState(0);
-  const [aiScore,     setAiScore]     = useState(0);
-  const [gameActive,  setGameActive]  = useState(false);
-  const [gameOver,    setGameOver]    = useState(false);
-  const [winner,      setWinner]      = useState(null);
-  const [statusMsg,   setStatusMsg]   = useState('Press SPACE to serve');
-  const [lastFault,   setLastFault]   = useState('');
-  const [serving,     setServing]     = useState(false);
-  const [aimIndicator, setAimIndicator] = useState(''); // visual aim feedback
+  const [playerScore,  setPlayerScore]  = useState(0);
+  const [aiScore,      setAiScore]      = useState(0);
+  const [gameActive,   setGameActive]   = useState(false);
+  const [gameOver,     setGameOver]     = useState(false);
+  const [winner,       setWinner]       = useState(null);
+  const [statusMsg,    setStatusMsg]    = useState('Press SPACE to serve');
+  const [lastFault,    setLastFault]    = useState('');
+  const [serving,      setServing]      = useState(false);
+  const [aimIndicator, setAimIndicator] = useState('');
 
   const playerScoreRef = useRef(0);
   const aiScoreRef     = useRef(0);
@@ -209,7 +212,7 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
   const servingAnimRef = useRef(false);
   const lastFrameTime  = useRef(Date.now());
 
-  // ── KEY HOLD TIMER (runs in rAF) ──
+  // Key hold timer
   useEffect(() => {
     let rafId;
     const tick = () => {
@@ -217,9 +220,7 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
       const dt  = (now - lastFrameTime.current) / 1000;
       lastFrameTime.current = now;
       Object.keys(keys.current).forEach(k => {
-        if (keys.current[k]) {
-          keyHoldTime.current[k] = (keyHoldTime.current[k] || 0) + dt;
-        }
+        if (keys.current[k]) keyHoldTime.current[k] = (keyHoldTime.current[k] || 0) + dt;
       });
       rafId = requestAnimationFrame(tick);
     };
@@ -291,7 +292,6 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
     if (fd.reason === 'NET_HIT') sfx.playNetHit();
     else sfx.playPointLose();
 
-    // Player loses if they caused it, AI loses if they caused it
     const playerLoses = fd.striker === 'PLAYER';
     if (playerLoses) {
       aiScoreRef.current += 1;
@@ -299,7 +299,6 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
       servingRef.current = 'ai';
       setLastFault(`❌ ${fd.reason.replace(/_/g, ' ')}`);
     } else {
-      // AI caused it — player scores
       playerScoreRef.current += 1;
       setPlayerScore(playerScoreRef.current);
       servingRef.current = 'player';
@@ -314,16 +313,20 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
   const handleShot = useCallback((sd) => {
     logTelemetry('SHOT', sd);
     if (sd.striker === 'PLAYER') {
-      if (sd.shotType === 'drive') sfx.playDrive();
-      else if (sd.shotType === 'dink') sfx.playDink();
-      else sfx.playHit();
+      if (sd.shotType === 'drive')      sfx.playDrive();
+      else if (sd.shotType === 'dink')  sfx.playDink();
+      else                              sfx.playHit();
     } else {
       sfx.playHit(0.7);
     }
   }, [logTelemetry, sfx]);
 
-  const handleBounce  = useCallback((bd) => { logTelemetry('BOUNCE', { striker: bd.side === 'player' ? 'PLAYER_SIDE' : 'AI_SIDE' }); sfx.playBounce(); }, [logTelemetry, sfx]);
-  const handleBotHit  = useCallback(() => sfx.playHit(0.7), [sfx]);
+  const handleBounce = useCallback((bd) => {
+    logTelemetry('BOUNCE', { striker: bd.side === 'player' ? 'PLAYER_SIDE' : 'AI_SIDE' });
+    sfx.playBounce();
+  }, [logTelemetry, sfx]);
+
+  const handleBotHit = useCallback(() => sfx.playHit(0.7), [sfx]);
 
   const launchBall = useCallback((server) => {
     if (!ballRef.current) return;
@@ -357,16 +360,19 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
 
   useEffect(() => {
     const down = (e) => {
-      if (!keys.current[e.key]) keyHoldTime.current[e.key] = 0; // reset on fresh press
+      // Only reset hold time on fresh key press
+      if (!keys.current[e.key]) keyHoldTime.current[e.key] = 0;
       keys.current[e.key] = true;
 
-      // Aim indicator
+      // Show aim indicator
       if (e.key === 'a') setAimIndicator('← Left');
       if (e.key === 'd') setAimIndicator('Right →');
       if (e.key === 'w') setAimIndicator('↑ Deep');
       if (e.key === 's') setAimIndicator('↓ Short');
 
       if (e.key === ' ' && !gameOverRef.current) { serveBall(); e.preventDefault(); }
+      // Prevent browser shortcuts for Shift/Ctrl
+      if (e.key === 'Shift' || e.key === 'Control') e.preventDefault();
     };
     const up = (e) => {
       keys.current[e.key] = false;
@@ -375,8 +381,24 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
     };
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
-    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+    };
   }, [serveBall]);
+
+  // Build combo hint for HUD
+  const getComboHint = () => {
+    const k = keys.current;
+    if (k['Shift'] && k['a'])   return 'DRIVE LEFT 💥←';
+    if (k['Shift'] && k['d'])   return 'DRIVE RIGHT 💥→';
+    if (k['Control'] && k['a']) return 'DINK LEFT 🎯←';
+    if (k['Control'] && k['d']) return 'DINK RIGHT 🎯→';
+    if (k['Shift'])              return 'DRIVE 💥';
+    if (k['Control'])            return 'DINK 🎯';
+    if (k['q'] || k['Q'])       return 'LOB 🌙';
+    return aimIndicator;
+  };
 
   return (
     <div className="w-full h-screen bg-slate-950 relative overflow-hidden">
@@ -405,12 +427,6 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
               <p className="text-slate-300 text-xs font-mono">{lastFault}</p>
             </div>
           )}
-          {/* Aim indicator */}
-          {aimIndicator && (
-            <div className="bg-lime-400/20 border border-lime-400/40 rounded-lg px-3 py-1">
-              <p className="text-lime-400 text-xs font-mono font-bold">{aimIndicator}</p>
-            </div>
-          )}
         </div>
 
         <div className="bg-slate-900/80 backdrop-blur border border-slate-700 rounded-2xl px-6 py-3 text-center">
@@ -419,16 +435,16 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
         </div>
       </div>
 
-      {/* Controls */}
+      {/* Controls legend */}
       <div className="absolute bottom-3 left-0 right-0 z-10 flex flex-wrap justify-center gap-2 pointer-events-none px-4">
         {[
-          ['↑↓←→', 'Move',      'text-slate-400'],
-          ['SPACE', 'Serve/Hit', 'text-lime-400'],
-          ['SHIFT', 'Drive 💥',  'text-orange-400'],
-          ['CTRL',  'Dink 🎯',   'text-blue-400'],
-          ['Q',     'Lob 🌙',    'text-purple-400'],
-          ['A / D', 'Aim (hold for wider angle)', 'text-yellow-400'],
-          ['W / S', 'Deep/Short','text-green-400'],
+          ['↑↓←→',        'Move',             'text-slate-400'],
+          ['SPACE',        'Serve / Hit',       'text-lime-400'],
+          ['SHIFT+SPACE',  'Drive 💥',          'text-orange-400'],
+          ['CTRL+SPACE',   'Dink 🎯',           'text-blue-400'],
+          ['Q+SPACE',      'Lob 🌙',            'text-purple-400'],
+          ['A / D',        'Aim L/R (hold=sharper)', 'text-yellow-400'],
+          ['W / S',        'Deep / Short',      'text-green-400'],
         ].map(([k, l, c]) => (
           <span key={k} className="bg-slate-900/80 border border-slate-700 rounded-lg px-2.5 py-1 text-xs font-mono">
             <span className="text-slate-600">{k}</span>
