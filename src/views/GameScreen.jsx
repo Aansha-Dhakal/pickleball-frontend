@@ -378,12 +378,18 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
 
   useEffect(() => {
     const down = (e) => {
-      if (!keys.current[e.key]) keyHoldTime.current[e.key] = 0;
-      keys.current[e.key] = true;
+      // e.repeat = true when browser fires repeated keydown while held
+      // Only reset hold time on the FIRST press, not on repeats
+      if (!e.repeat) {
+        keys.current[e.key] = true;
+        keyHoldTime.current[e.key] = 0; // fresh press — reset timer
+      }
+
       if (e.key === 'a') setAimIndicator('← Left');
       if (e.key === 'd') setAimIndicator('Right →');
       if (e.key === 'w') setAimIndicator('↑ Deep');
       if (e.key === 's') setAimIndicator('↓ Short');
+
       if (e.key === ' ' && !gameOverRef.current) { serveBall(); e.preventDefault(); }
       if (e.key === 'Shift' || e.key === 'Control') e.preventDefault();
     };

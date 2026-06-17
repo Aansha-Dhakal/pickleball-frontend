@@ -4,15 +4,15 @@ import * as THREE from 'three';
 import { COURT_W, COURT_L, NET_H } from '../Court';
 
 const BALL_RADIUS = 0.15;
-const FLOOR_Y = BALL_RADIUS;
-const GRAVITY = -18;
+const FLOOR_Y     = BALL_RADIUS;
+const GRAVITY     = -18;
 
 const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
   const meshRef   = useRef();
   const shadowRef = useRef();
 
-  const vel    = useRef(new THREE.Vector3());
-  const active = useRef(false);
+  const vel         = useRef(new THREE.Vector3());
+  const active      = useRef(false);
   const lastStriker = useRef('NONE');
 
   const playerSideBounces = useRef(0);
@@ -30,9 +30,9 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       prevZ.current = pos.z;
       playerSideBounces.current = 0;
       aiSideBounces.current     = 0;
-      currentSide.current   = pos.z > 0 ? 'player' : 'ai';
-      lastStriker.current   = striker;
-      active.current        = true;
+      currentSide.current       = pos.z > 0 ? 'player' : 'ai';
+      lastStriker.current       = striker;
+      active.current            = true;
     },
 
     stop() {
@@ -80,7 +80,7 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
     const nowSide = pos.z > 0 ? 'player' : 'ai';
     if (nowSide !== currentSide.current) {
       if (nowSide === 'player') playerSideBounces.current = 0;
-      else aiSideBounces.current = 0;
+      else                      aiSideBounces.current     = 0;
       currentSide.current = nowSide;
     }
 
@@ -103,10 +103,23 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       v.z  *= 0.88;
       if (Math.abs(v.y) < 0.4) v.y = 0;
 
-      // Out of bounds — whoever hit it last is responsible
-      if (Math.abs(pos.x) > COURT_W / 2 + 0.15 || Math.abs(pos.z) > COURT_L / 2 + 0.15) {
+      const halfW = COURT_W / 2;
+      const halfL = COURT_L / 2;
+
+      // ── OUT OF BOUNDS on bounce ──
+      // Key fix: use WHICH SIDE the ball is on to decide who gets the point,
+      // NOT who hit it last. If ball bounces out on AI side → player scores.
+      // If ball bounces out on player side → AI scores.
+      if (Math.abs(pos.x) > halfW + 0.15 || Math.abs(pos.z) > halfL + 0.15) {
         active.current = false;
-        if (onFault) onFault({ reason: 'OUT_OF_BOUNDS', striker: lastStriker.current, position: pos.clone() });
+        const outSide = pos.z > 0 ? 'player' : 'ai';
+        if (outSide === 'ai') {
+          // Ball went out on AI side — player scores
+          if (onScore) onScore({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+        } else {
+          // Ball went out on player side — AI scores
+          if (onScore) onScore({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
+        }
         prevY.current = pos.y;
         prevZ.current = pos.z;
         return;
@@ -114,7 +127,7 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
 
       const side = pos.z > 0 ? 'player' : 'ai';
       if (side === 'player') playerSideBounces.current += 1;
-      else aiSideBounces.current += 1;
+      else                   aiSideBounces.current     += 1;
 
       const sideBounces = side === 'player'
         ? playerSideBounces.current
@@ -122,7 +135,7 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
 
       if (onBounce) onBounce({ position: pos.clone(), side, sideBounces });
 
-      // Double bounce
+      // ── DOUBLE BOUNCE ──
       if (sideBounces >= 2) {
         active.current = false;
         if (side === 'player') onScore?.({ scorer: 'ai',    reason: 'DOUBLE_BOUNCE' });
@@ -133,7 +146,7 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       }
     }
 
-    // Missed past baseline
+    // ── MISSED PAST BASELINE (never bounced, flew over) ──
     if (pos.z >  COURT_L / 2 + 3) { active.current = false; onScore?.({ scorer: 'ai',    reason: 'MISSED_SHOT' }); }
     if (pos.z < -(COURT_L / 2 + 3)) { active.current = false; onScore?.({ scorer: 'player', reason: 'MISSED_SHOT' }); }
 
