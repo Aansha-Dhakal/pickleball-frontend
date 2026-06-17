@@ -27,7 +27,7 @@ const difficulties = [
   },
 ];
 
-export default function HomeScreen({ onStartGame }) {
+export default function HomeScreen({ onStartGame, onHistory }) {
   const [selected, setSelected] = useState('medium');
 
   return (
@@ -91,6 +91,13 @@ export default function HomeScreen({ onStartGame }) {
       >
         START MATCH
         <span className="ml-3 group-hover:translate-x-1 inline-block transition-transform duration-200">→</span>
+      </button>
+
+      <button
+        onClick={onHistory}
+        className="px-8 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-400 hover:text-slate-200 font-mono text-sm rounded-2xl transition-all duration-200"
+      >
+        📋 Match History
       </button>
 
       {/* Controls hint */}

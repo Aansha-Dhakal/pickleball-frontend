@@ -129,7 +129,7 @@ function ReactionChart({ data }) {
 
 // ── MAIN DASHBOARD ──────────────────────────────────────────────────
 
-export default function DashboardScreen({ data, matchId, difficulty, onRestart }) {
+export default function DashboardScreen({ data, matchId, difficulty, onRestart, onHistory, fromHistory }) {
 
   const stats = useMemo(() => {
     const shots = data.filter(e => e.event_type === 'SHOT');
@@ -176,8 +176,10 @@ export default function DashboardScreen({ data, matchId, difficulty, onRestart }
     };
   }, [data]);
 
+  const API = import.meta.env.VITE_API_URL || 'https://pickleball-backend-h86y.onrender.com';
+
   const handleExportCSV = () => {
-    window.open(`https://pickleball-backend-h86y.onrender.com/api/export-csv?match_id=${matchId}`, '_blank');
+    window.open(`${API}/api/export-csv?match_id=${matchId}`, '_blank');
   };
 
   return (
@@ -204,12 +206,30 @@ export default function DashboardScreen({ data, matchId, difficulty, onRestart }
             >
               ↓ Export CSV
             </button>
-            <button
-              onClick={onRestart}
-              className="px-5 py-2.5 bg-lime-400 hover:bg-lime-300 text-slate-950 text-sm font-black rounded-xl transition-all hover:scale-105"
-            >
-              Play Again
-            </button>
+            {onHistory && (
+              <button
+                onClick={onHistory}
+                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-sm font-mono rounded-xl transition-all"
+              >
+                📋 History
+              </button>
+            )}
+            {!fromHistory && (
+              <button
+                onClick={onRestart}
+                className="px-5 py-2.5 bg-lime-400 hover:bg-lime-300 text-slate-950 text-sm font-black rounded-xl transition-all hover:scale-105"
+              >
+                Play Again
+              </button>
+            )}
+            {fromHistory && (
+              <button
+                onClick={onHistory}
+                className="px-5 py-2.5 bg-lime-400 hover:bg-lime-300 text-slate-950 text-sm font-black rounded-xl transition-all hover:scale-105"
+              >
+                ← Back to History
+              </button>
+            )}
           </div>
         </div>
 
