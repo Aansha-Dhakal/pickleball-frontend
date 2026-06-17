@@ -18,6 +18,7 @@ const START_Y       = 1.2;
 const API = import.meta.env.VITE_API_URL || 'https://pickleball-backend-h86y.onrender.com';
 
 // ── SHOT PHYSICS ─────────────────────────────────────────────────
+// vx uses tLand (actual flight time) so ball ALWAYS lands exactly at targetX
 function calcShot(playerPos, targetX, shotType, aimDepth = 'normal') {
   const distToNet = Math.max(playerPos.z, 3);
   const types = {
@@ -30,12 +31,17 @@ function calcShot(playerPos, targetX, shotType, aimDepth = 'normal') {
   if (aimDepth === 'deep')  hz = Math.min(hz * 1.25, 40);
   if (aimDepth === 'short') hz = Math.max(hz * 0.7, 8);
 
-  const tToNet  = distToNet / hz;
-  const vy      = (NET_H + netClear - START_Y - 0.5 * GRAVITY * tToNet * tToNet) / tToNet;
+  const tToNet = distToNet / hz;
+  const vy     = (NET_H + netClear - START_Y - 0.5 * GRAVITY * tToNet * tToNet) / tToNet;
 
-  // vx: direct time-of-flight calculation — no dampening, full power
-  const tFlight = tToNet * 2; // estimated total flight time
-  const vx      = (targetX - playerPos.x) / tFlight;
+  // Compute actual total flight time from vy and gravity
+  // Solve: START_Y + vy*t + 0.5*GRAVITY*t^2 = 0
+  const a    = 0.5 * GRAVITY;
+  const disc = vy * vy - 4 * a * START_Y;
+  const tLand = disc >= 0 ? (-vy - Math.sqrt(disc)) / (2 * a) : tToNet * 2;
+
+  // Exact vx: ball travels (targetX - playerX) in tLand seconds — no guessing
+  const vx = (targetX - playerPos.x) / tLand;
 
   return { x: vx, y: Math.max(vy, 3), z: -hz };
 }
@@ -63,6 +69,8 @@ function GameLogic({
   const botDelay  = { easy: 0.75, medium: 0.32, hard: 0.1 }[difficulty] || 0.32;
   const botTimer  = useRef(0);
   const botHasHit = useRef(false);
+  // Track total bounces across entire rally for double-bounce rule context
+  const rallyBounces = useRef({ player: 0, ai: 0 });
 
   useFrame((state, delta) => {
     if (!gameActive || !ballRef.current?.isActive()) return;
@@ -73,7 +81,7 @@ function GameLogic({
     const playerPos = playerRef.current.getPosition();
     const botPos    = botRef.current.getPosition();
 
-    // ── BOT POSITIONING ──
+    // ── BOT POSITIONING — predict landing ──
     botTimer.current += delta;
     if (botTimer.current > botDelay) {
       botTimer.current = 0;
@@ -84,8 +92,16 @@ function GameLogic({
         if (disc >= 0) {
           const tLand = (-vy - Math.sqrt(disc)) / g;
           if (tLand > 0) {
-            landZ = Math.max(-(COURT_L / 2), Math.min(-0.3, ballPos.z + ballVel.z * tLand));
+            landZ = ballPos.z + ballVel.z * tLand;
             landX = Math.max(-COURT_W / 2 + 0.5, Math.min(COURT_W / 2 - 0.5, ballPos.x + ballVel.x * tLand));
+            landZ = Math.max(-(COURT_L / 2), Math.min(-0.3, landZ));
+
+            // If ball will land in kitchen — bot must wait at kitchen line
+            // (can only enter after ball bounces there)
+            const ballBouncedOnAISide = ballRef.current.getBounceCount() > 0;
+            if (landZ > -KITCHEN_DEPTH && !ballBouncedOnAISide) {
+              landZ = -KITCHEN_DEPTH - 0.3; // stay just behind kitchen line
+            }
           }
         }
         botRef.current.moveTo(landX, landZ);
@@ -105,38 +121,34 @@ function GameLogic({
       lastPlayerHit.current = now;
       playerRef.current.triggerSwing();
 
-      // Kitchen violation
+      // Kitchen violation — player volleying from kitchen before bounce
       if (playerRef.current.isInKitchen() && ballRef.current.getBounceCount() === 0) {
         onFault({ reason: 'KITCHEN_VIOLATION', striker: 'PLAYER', position: ballPos.clone() });
         return;
       }
 
-      // ── SHOT TYPE — read all modifier keys simultaneously ──
-      // Shift = drive, Ctrl = dink, Q = lob, default = normal
-      // These work independently of aim keys (A/D/W/S)
+      // Shot type — all modifier keys work simultaneously with aim keys
       let shotType = 'normal';
       if (keys.current['Shift'])                  shotType = 'drive';
       if (keys.current['Control'])                shotType = 'dink';
       if (keys.current['q'] || keys.current['Q']) shotType = 'lob';
 
-      // ── AIM — hold time based, fully independent of shot type ──
-      // Tap A/D = slight angle, hold = sharp crosscourt
-      const MAX_HOLD  = 1.2;  // seconds for full crosscourt
-      const HALF_W    = COURT_W * 0.44; // just inside sideline
-      const CENTER_X  = botPos.x;
+      // ── AIM — hold time scales angle linearly ──
+      const MAX_HOLD = 1.0;   // 1 second = full crosscourt
+      const MAX_X    = COURT_W * 0.44; // just inside sideline = 8.8ft
+      const centerX  = botPos.x;
 
-      let aimX = CENTER_X + (Math.random() - 0.5) * 1.5; // default: straight at bot
+      let aimX = centerX + (Math.random() - 0.5) * 1.5;
 
       if (keys.current['a']) {
         const t = Math.min(keyHoldTime.current['a'] || 0, MAX_HOLD) / MAX_HOLD;
-        // Linear interpolation: 0 hold = 30% angle, full hold = 100% crosscourt
-        aimX = -HALF_W * (0.3 + t * 0.7);
+        // Tap (t=0) = 40% crosscourt, full hold (t=1) = 100%
+        aimX = -(MAX_X * (0.4 + t * 0.6));
       } else if (keys.current['d']) {
         const t = Math.min(keyHoldTime.current['d'] || 0, MAX_HOLD) / MAX_HOLD;
-        aimX =  HALF_W * (0.3 + t * 0.7);
+        aimX =  (MAX_X * (0.4 + t * 0.6));
       }
 
-      // W/S = depth control
       let aimDepth = 'normal';
       if (keys.current['w']) aimDepth = 'deep';
       if (keys.current['s']) aimDepth = 'short';
@@ -162,14 +174,20 @@ function GameLogic({
       now - lastBotHit.current > HIT_COOLDOWN &&
       !botHasHit.current
     ) {
-      lastBotHit.current = now;
-      botHasHit.current  = true;
+      // ── AI KITCHEN VIOLATION ──
+      // Bot is in kitchen zone (z between 0 and -KITCHEN_DEPTH)
+      // AND ball hasn't bounced on AI side yet = illegal volley
+      const botInKitchen = botPos.z > -KITCHEN_DEPTH && botPos.z < 0;
+      const aiSideBounces = ballRef.current.getBounceCount(); // bounces on current side
 
-      // AI kitchen violation
-      if (botRef.current.isInKitchen() && ballRef.current.getBounceCount() === 0) {
+      if (botInKitchen && aiSideBounces === 0) {
+        // Kitchen violation — player gets the point
         onFault({ reason: 'KITCHEN_VIOLATION', striker: 'AI', position: ballPos.clone() });
         return;
       }
+
+      lastBotHit.current = now;
+      botHasHit.current  = true;
 
       const hitVel = botRef.current.attemptHit(ballPos, ballVel);
       if (hitVel) {
@@ -212,7 +230,7 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
   const servingAnimRef = useRef(false);
   const lastFrameTime  = useRef(Date.now());
 
-  // Key hold timer
+  // Key hold timer — runs every frame
   useEffect(() => {
     let rafId;
     const tick = () => {
@@ -313,9 +331,9 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
   const handleShot = useCallback((sd) => {
     logTelemetry('SHOT', sd);
     if (sd.striker === 'PLAYER') {
-      if (sd.shotType === 'drive')      sfx.playDrive();
-      else if (sd.shotType === 'dink')  sfx.playDink();
-      else                              sfx.playHit();
+      if (sd.shotType === 'drive')     sfx.playDrive();
+      else if (sd.shotType === 'dink') sfx.playDink();
+      else                             sfx.playHit();
     } else {
       sfx.playHit(0.7);
     }
@@ -326,7 +344,7 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
     sfx.playBounce();
   }, [logTelemetry, sfx]);
 
-  const handleBotHit = useCallback(() => sfx.playHit(0.7), [sfx]);
+  const handleBotHit  = useCallback(() => sfx.playHit(0.7), [sfx]);
 
   const launchBall = useCallback((server) => {
     if (!ballRef.current) return;
@@ -360,18 +378,13 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
 
   useEffect(() => {
     const down = (e) => {
-      // Only reset hold time on fresh key press
       if (!keys.current[e.key]) keyHoldTime.current[e.key] = 0;
       keys.current[e.key] = true;
-
-      // Show aim indicator
       if (e.key === 'a') setAimIndicator('← Left');
       if (e.key === 'd') setAimIndicator('Right →');
       if (e.key === 'w') setAimIndicator('↑ Deep');
       if (e.key === 's') setAimIndicator('↓ Short');
-
       if (e.key === ' ' && !gameOverRef.current) { serveBall(); e.preventDefault(); }
-      // Prevent browser shortcuts for Shift/Ctrl
       if (e.key === 'Shift' || e.key === 'Control') e.preventDefault();
     };
     const up = (e) => {
@@ -386,19 +399,6 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
       window.removeEventListener('keyup', up);
     };
   }, [serveBall]);
-
-  // Build combo hint for HUD
-  const getComboHint = () => {
-    const k = keys.current;
-    if (k['Shift'] && k['a'])   return 'DRIVE LEFT 💥←';
-    if (k['Shift'] && k['d'])   return 'DRIVE RIGHT 💥→';
-    if (k['Control'] && k['a']) return 'DINK LEFT 🎯←';
-    if (k['Control'] && k['d']) return 'DINK RIGHT 🎯→';
-    if (k['Shift'])              return 'DRIVE 💥';
-    if (k['Control'])            return 'DINK 🎯';
-    if (k['q'] || k['Q'])       return 'LOB 🌙';
-    return aimIndicator;
-  };
 
   return (
     <div className="w-full h-screen bg-slate-950 relative overflow-hidden">
@@ -427,6 +427,11 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
               <p className="text-slate-300 text-xs font-mono">{lastFault}</p>
             </div>
           )}
+          {aimIndicator && (
+            <div className="bg-lime-400/20 border border-lime-400/40 rounded-lg px-3 py-1">
+              <p className="text-lime-400 text-xs font-mono font-bold">{aimIndicator}</p>
+            </div>
+          )}
         </div>
 
         <div className="bg-slate-900/80 backdrop-blur border border-slate-700 rounded-2xl px-6 py-3 text-center">
@@ -435,16 +440,16 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
         </div>
       </div>
 
-      {/* Controls legend */}
+      {/* Controls */}
       <div className="absolute bottom-3 left-0 right-0 z-10 flex flex-wrap justify-center gap-2 pointer-events-none px-4">
         {[
-          ['↑↓←→',        'Move',             'text-slate-400'],
-          ['SPACE',        'Serve / Hit',       'text-lime-400'],
-          ['SHIFT+SPACE',  'Drive 💥',          'text-orange-400'],
-          ['CTRL+SPACE',   'Dink 🎯',           'text-blue-400'],
-          ['Q+SPACE',      'Lob 🌙',            'text-purple-400'],
-          ['A / D',        'Aim L/R (hold=sharper)', 'text-yellow-400'],
-          ['W / S',        'Deep / Short',      'text-green-400'],
+          ['↑↓←→',       'Move',              'text-slate-400'],
+          ['SPACE',       'Serve / Hit',        'text-lime-400'],
+          ['SHIFT+SPACE', 'Drive 💥',           'text-orange-400'],
+          ['CTRL+SPACE',  'Dink 🎯',            'text-blue-400'],
+          ['Q+SPACE',     'Lob 🌙',             'text-purple-400'],
+          ['A / D',       'Aim L/R (hold=wider)', 'text-yellow-400'],
+          ['W / S',       'Deep / Short',       'text-green-400'],
         ].map(([k, l, c]) => (
           <span key={k} className="bg-slate-900/80 border border-slate-700 rounded-lg px-2.5 py-1 text-xs font-mono">
             <span className="text-slate-600">{k}</span>

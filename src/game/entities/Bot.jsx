@@ -25,10 +25,15 @@ const Bot = forwardRef(function Bot({ difficulty = 'medium' }, ref) {
     },
 
     moveTo(x, z) {
+      // Bot should stay behind kitchen line (-KITCHEN_DEPTH) unless
+      // chasing a ball that has already landed in the kitchen
+      const minZ = z > -KITCHEN_DEPTH
+        ? Math.max(-KITCHEN_DEPTH - 0.3, z) // allow entering kitchen only when ball lands there
+        : z;
       targetPos.current.set(
         Math.max(-COURT_W / 2 + 0.5, Math.min(COURT_W / 2 - 0.5, x)),
         0,
-        Math.max(-(COURT_L / 2), Math.min(-0.8, z))
+        Math.max(-(COURT_L / 2), Math.min(-0.5, minZ))
       );
     },
 
