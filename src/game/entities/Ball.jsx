@@ -33,7 +33,10 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       active.current            = true;
     },
     stop() { active.current = false; vel.current.set(0, 0, 0); },
-    hit(v, striker = 'PLAYER') { vel.current.set(v.x, v.y, v.z); lastStriker.current = striker; },
+    hit(v, striker = 'PLAYER') {
+      vel.current.set(v.x, v.y, v.z);
+      lastStriker.current = striker;
+    },
     getPosition()    { return meshRef.current?.position.clone() ?? new THREE.Vector3(); },
     getVelocity()    { return vel.current.clone(); },
     getLastStriker() { return lastStriker.current; },
@@ -51,7 +54,6 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
     const pos = meshRef.current.position;
     const v   = vel.current;
 
-    // Physics
     v.y   += GRAVITY * dt;
     pos.x += v.x * dt;
     pos.y += v.y * dt;
@@ -65,7 +67,7 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       shadowRef.current.scale.set(s, s, s);
     }
 
-    // Track which side ball is on — reset that side's bounce count when it arrives
+    // Side crossing — reset that side's bounce count
     const nowSide = pos.z > 0 ? 'player' : 'ai';
     if (nowSide !== currentSide.current) {
       if (nowSide === 'player') playerSideBounces.current = 0;
@@ -78,8 +80,23 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
     const crossedFromAI     = prevZ.current < -0.12 && pos.z >= -0.12;
     if ((crossedFromPlayer || crossedFromAI) && pos.y < NET_H + BALL_RADIUS) {
       active.current = false;
-      // Whoever hit it last caused the net fault
       if (onFault) onFault({ reason: 'NET_HIT', striker: lastStriker.current, position: pos.clone() });
+      prevY.current = pos.y;
+      prevZ.current = pos.z;
+      return;
+    }
+
+    // ── MID-AIR OUT OF BOUNDS (sideways, never touched ground) ──
+    // Whoever hit it last is responsible — use lastStriker
+    if (pos.y > FLOOR_Y && Math.abs(pos.x) > COURT_W / 2 + 0.2) {
+      active.current = false;
+      if (lastStriker.current === 'PLAYER') {
+        // Player hit it out sideways — AI scores
+        onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
+      } else {
+        // AI hit it out sideways — player scores
+        onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+      }
       prevY.current = pos.y;
       prevZ.current = pos.z;
       return;
@@ -94,16 +111,14 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       if (Math.abs(v.y) < 0.4) v.y = 0;
 
       // ── OUT OF BOUNDS on bounce ──
-      // Score based on WHERE the ball went out, not who hit it
-      // Ball out on AI side (z < 0)  → player scores
-      // Ball out on player side (z > 0) → AI scores
+      // Score based on WHERE ball bounced — not who hit it
       if (Math.abs(pos.x) > COURT_W / 2 + 0.15 || Math.abs(pos.z) > COURT_L / 2 + 0.15) {
         active.current = false;
         if (pos.z <= 0) {
-          // Out on AI side — PLAYER scores
+          // Bounced out on AI side — player scores
           onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
         } else {
-          // Out on player side — AI scores
+          // Bounced out on player side — AI scores
           onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
         }
         prevY.current = pos.y;
