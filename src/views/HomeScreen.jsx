@@ -31,64 +31,41 @@ const difficulties = [
   { id: 'hard',   label: 'HARD',   color: '#f87171', glow: 'rgba(248,113,113,0.5)' },
 ];
 
-// ── FALL GUYS STYLE 3D TEXT ───────────────────────────────────────
-function FallGuysText({ text, fontSize = 48, color = '#d4f54e', strokeColor = '#1a1a00', strokeWidth = 8 }) {
+// Fall Guys 3D text — fixed viewBox calculation
+function FallGuysText({ text, fontSize = 48, color = '#d4f54e', strokeColor = '#1a3000', strokeWidth = 8, width = 600 }) {
+  const height = fontSize * 1.5;
   return (
-    <svg
-      viewBox={`0 0 ${text.length * fontSize * 0.65} ${fontSize * 1.4}`}
-      style={{ width: '100%', maxWidth: `${text.length * fontSize * 0.65}px`, display: 'block' }}
-    >
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
       <defs>
-        <filter id="fgShadow" x="-10%" y="-10%" width="120%" height="130%">
-          <feDropShadow dx="3" dy="5" stdDeviation="3" floodColor="rgba(0,0,0,0.5)" />
+        <filter id={`shadow_${text.replace(/\s/g,'_')}`} x="-5%" y="-5%" width="115%" height="130%">
+          <feDropShadow dx="2" dy="4" stdDeviation="3" floodColor="rgba(0,0,0,0.55)" />
         </filter>
       </defs>
-      {/* Black stroke layer — thick outline */}
-      <text
-        x="50%" y="78%"
-        textAnchor="middle"
-        fontFamily='"Arial Black", "Arial", sans-serif'
-        fontSize={fontSize}
-        fontWeight="900"
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth={strokeWidth * 2}
-        strokeLinejoin="round"
-        strokeLinecap="round"
+      <text x="50%" y="78%" textAnchor="middle"
+        fontFamily='"Arial Black","Impact",sans-serif'
+        fontSize={fontSize} fontWeight="900"
+        fill="none" stroke={strokeColor}
+        strokeWidth={strokeWidth * 2.2}
+        strokeLinejoin="round" strokeLinecap="round"
         paintOrder="stroke"
-      >
-        {text}
-      </text>
-      {/* Main colored fill */}
-      <text
-        x="50%" y="78%"
-        textAnchor="middle"
-        fontFamily='"Arial Black", "Arial", sans-serif'
-        fontSize={fontSize}
-        fontWeight="900"
+      >{text}</text>
+      <text x="50%" y="78%" textAnchor="middle"
+        fontFamily='"Arial Black","Impact",sans-serif'
+        fontSize={fontSize} fontWeight="900"
         fill={color}
-        filter="url(#fgShadow)"
-        style={{ letterSpacing: '3px' }}
-      >
-        {text}
-      </text>
-      {/* Top highlight gloss */}
-      <text
-        x="50%" y="78%"
-        textAnchor="middle"
-        fontFamily='"Arial Black", "Arial", sans-serif'
-        fontSize={fontSize}
-        fontWeight="900"
-        fill="rgba(255,255,255,0.18)"
-        style={{ letterSpacing: '3px' }}
-      >
-        {text}
-      </text>
+        filter={`url(#shadow_${text.replace(/\s/g,'_')})`}
+        style={{ letterSpacing: '2px' }}
+      >{text}</text>
+      <text x="50%" y="78%" textAnchor="middle"
+        fontFamily='"Arial Black","Impact",sans-serif'
+        fontSize={fontSize} fontWeight="900"
+        fill="rgba(255,255,255,0.15)"
+        style={{ letterSpacing: '2px' }}
+      >{text}</text>
     </svg>
   );
 }
 
-// ── ANIMATED PADDLE + BALL ────────────────────────────────────────
 function PaddleHero() {
   const paddleRef = useRef(null);
   const ballRef   = useRef(null);
@@ -99,22 +76,13 @@ function PaddleHero() {
   useEffect(() => {
     const animate = () => {
       t.current += 0.018;
-      // Paddle: gentle bob + slight tilt
       const bobY = Math.sin(t.current) * 9;
       const rot  = Math.sin(t.current * 0.6) * 4;
-      if (paddleRef.current) {
-        paddleRef.current.style.transform = `translateY(${bobY}px) rotate(${rot}deg)`;
-      }
-      // Ball: independent bob, slightly out of phase
+      if (paddleRef.current) paddleRef.current.style.transform = `translateY(${bobY}px) rotate(${rot}deg)`;
       const ballBob   = Math.sin(t.current + 1.2) * 11;
       const ballScale = 1 + Math.sin(t.current + 1.2) * 0.07;
-      if (ballRef.current) {
-        ballRef.current.style.transform = `translateY(${ballBob}px) scale(${ballScale})`;
-      }
-      // Glow pulse
-      if (glowRef.current) {
-        glowRef.current.style.opacity = 0.35 + Math.sin(t.current) * 0.15;
-      }
+      if (ballRef.current)   ballRef.current.style.transform = `translateY(${ballBob}px) scale(${ballScale})`;
+      if (glowRef.current)   glowRef.current.style.opacity   = String(0.35 + Math.sin(t.current) * 0.15);
       frameRef.current = requestAnimationFrame(animate);
     };
     frameRef.current = requestAnimationFrame(animate);
@@ -122,53 +90,38 @@ function PaddleHero() {
   }, []);
 
   return (
-    <div style={{ position: 'relative', width: '240px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {/* Radial glow behind */}
+    <div style={{ position: 'relative', width: '260px', height: '280px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div ref={glowRef} style={{
-        position: 'absolute', width: '200px', height: '200px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(120,220,60,0.25) 0%, transparent 70%)',
-        filter: 'blur(18px)', top: '40px', left: '20px',
+        position: 'absolute', width: '220px', height: '220px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(120,220,60,0.22) 0%, transparent 70%)',
+        filter: 'blur(20px)', top: '30px', left: '20px',
       }} />
-
-      {/* Paddle image */}
-      <img ref={paddleRef} src={PADDLE_SRC} alt="paddle"
-        style={{
-          width: '200px', height: '200px', objectFit: 'contain',
-          position: 'absolute', top: '40px', left: '20px',
-          imageRendering: 'high-quality',
-          filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.4)) drop-shadow(0 0 10px rgba(80,200,80,0.15))',
-          transition: 'transform 0.05s linear',
-        }}
-      />
-
-      {/* Real ball image */}
-      <img ref={ballRef} src={BALL_SRC} alt="ball"
-        style={{
-          width: '68px', height: '68px', objectFit: 'contain',
-          position: 'absolute', top: '10px', right: '10px',
-          imageRendering: 'high-quality',
-          filter: 'drop-shadow(0 4px 12px rgba(180,220,0,0.5)) drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
-          transition: 'transform 0.05s linear',
-          zIndex: 3,
-        }}
-      />
+      <img ref={paddleRef} src={PADDLE_SRC} alt="paddle" style={{
+        width: '210px', height: '210px', objectFit: 'contain',
+        position: 'absolute', top: '35px', left: '25px',
+        filter: 'drop-shadow(0 8px 22px rgba(0,0,0,0.45)) drop-shadow(0 0 12px rgba(80,200,80,0.18))',
+      }} />
+      <img ref={ballRef} src={BALL_SRC} alt="ball" style={{
+        width: '72px', height: '72px', objectFit: 'contain',
+        position: 'absolute', top: '8px', right: '8px', zIndex: 3,
+        filter: 'drop-shadow(0 4px 12px rgba(180,220,0,0.55)) drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
+      }} />
     </div>
   );
 }
 
-// ── STATS PANEL ───────────────────────────────────────────────────
 function StatsPanel() {
-  const W = 240, H_MAP = 195, H_CHART = 75, PAD = 14;
+  const W = 250, H_MAP = 200, H_CHART = 78, PAD = 14;
   const COURT_W = 20, COURT_L = 22;
 
   const toSvg = (x, z) => ({
     sx: PAD + ((x + COURT_W / 2) / COURT_W) * (W - PAD * 2),
-    sy: PAD + ((Math.abs(z)) / COURT_L) * (H_MAP - PAD * 2) * 0.88,
+    sy: PAD + (Math.abs(z) / COURT_L) * (H_MAP - PAD * 2) * 0.88,
   });
 
-  const data = MATCH_DATA.reactionTimes;
-  const max = Math.max(...data), min = Math.min(...data), range = max - min || 1;
-  const chartPts = data.map((v, i) => {
+  const data  = MATCH_DATA.reactionTimes;
+  const max   = Math.max(...data), min = Math.min(...data), range = max - min || 1;
+  const cPts  = data.map((v, i) => {
     const x = PAD + (i / (data.length - 1)) * (W - PAD * 2);
     const y = H_CHART - PAD - ((v - min) / range) * (H_CHART - PAD * 2);
     return `${x},${y}`;
@@ -176,31 +129,29 @@ function StatsPanel() {
 
   return (
     <div style={{
-      background: 'rgba(15,35,8,0.65)',
-      borderRadius: '20px',
-      border: '1.5px solid rgba(100,200,60,0.3)',
-      padding: '14px 14px 12px',
+      background: 'rgba(12,30,6,0.7)',
+      borderRadius: '18px',
+      border: '1.5px solid rgba(100,200,60,0.28)',
+      padding: '14px',
       backdropFilter: 'blur(10px)',
-      boxShadow: '0 4px 28px rgba(0,0,0,0.35), inset 0 1px 0 rgba(100,200,60,0.08)',
+      boxShadow: '0 4px 28px rgba(0,0,0,0.35)',
+      width: '278px', flexShrink: 0,
     }}>
-      <p style={{ color: 'rgba(140,210,70,0.75)', fontSize: '9px', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '3px', marginBottom: '10px', borderBottom: '1px solid rgba(100,200,60,0.15)', paddingBottom: '6px' }}>
-        Last Match · Analytics
-      </p>
+      <p style={{ color: 'rgba(140,210,70,0.75)', fontSize: '9px', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '3px', marginBottom: '8px', borderBottom: '1px solid rgba(100,200,60,0.15)', paddingBottom: '5px' }}>Last Match · Analytics</p>
+      <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '8px', fontFamily: 'monospace', letterSpacing: '2px', marginBottom: '5px' }}>SHOT PLACEMENT</p>
 
-      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px', fontFamily: 'monospace', letterSpacing: '2px', marginBottom: '5px' }}>SHOT PLACEMENT</p>
       <svg width={W} height={H_MAP} style={{ display: 'block' }}>
-        <rect x={PAD} y={PAD} width={W-PAD*2} height={H_MAP-PAD*2} rx="6"
-          fill="rgba(20,50,10,0.8)" stroke="rgba(100,200,60,0.2)" strokeWidth="1.5" />
-        <line x1={PAD} y1={H_MAP/2} x2={W-PAD} y2={H_MAP/2} stroke="rgba(255,255,255,0.5)" strokeWidth="2" />
-        <line x1={PAD} y1={H_MAP/2-26} x2={W-PAD} y2={H_MAP/2-26} stroke="rgba(100,200,60,0.2)" strokeWidth="1" strokeDasharray="3,3"/>
-        <line x1={PAD} y1={H_MAP/2+26} x2={W-PAD} y2={H_MAP/2+26} stroke="rgba(100,200,60,0.2)" strokeWidth="1" strokeDasharray="3,3"/>
-        <line x1={W/2} y1={PAD} x2={W/2} y2={H_MAP-PAD} stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
+        <rect x={PAD} y={PAD} width={W-PAD*2} height={H_MAP-PAD*2} rx="5" fill="rgba(18,48,8,0.8)" stroke="rgba(100,200,60,0.2)" strokeWidth="1.5"/>
+        <line x1={PAD} y1={H_MAP/2} x2={W-PAD} y2={H_MAP/2} stroke="rgba(255,255,255,0.5)" strokeWidth="2"/>
+        <line x1={PAD} y1={H_MAP/2-26} x2={W-PAD} y2={H_MAP/2-26} stroke="rgba(100,200,60,0.18)" strokeWidth="1" strokeDasharray="3,3"/>
+        <line x1={PAD} y1={H_MAP/2+26} x2={W-PAD} y2={H_MAP/2+26} stroke="rgba(100,200,60,0.18)" strokeWidth="1" strokeDasharray="3,3"/>
+        <line x1={W/2} y1={PAD} x2={W/2} y2={H_MAP-PAD} stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>
         {MATCH_DATA.shots.map((s, i) => {
           const { sx, sy } = toSvg(s.x, s.z);
           return (
             <g key={i}>
-              <circle cx={sx} cy={sy} r={7} fill={SHOT_COLORS[s.type]} opacity={0.25} />
-              <circle cx={sx} cy={sy} r={4} fill={SHOT_COLORS[s.type]} opacity={0.85} />
+              <circle cx={sx} cy={sy} r={7} fill={SHOT_COLORS[s.type]} opacity={0.22}/>
+              <circle cx={sx} cy={sy} r={3.5} fill={SHOT_COLORS[s.type]} opacity={0.9}/>
             </g>
           );
         })}
@@ -208,76 +159,77 @@ function StatsPanel() {
         <text x={W/2} y={PAD+10} textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="8" fontFamily="monospace">AI</text>
       </svg>
 
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', margin: '6px 0 10px' }}>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', margin: '6px 0 8px' }}>
         {Object.entries(SHOT_COLORS).map(([type, color]) => (
           <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: color }} />
+            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: color }}/>
             <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px', fontFamily: 'monospace' }}>{type}</span>
           </div>
         ))}
       </div>
 
-      <div style={{ height: '1px', background: 'rgba(100,200,60,0.15)', margin: '4px 0 8px' }} />
+      <div style={{ height: '1px', background: 'rgba(100,200,60,0.14)', margin: '2px 0 8px' }}/>
+      <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '8px', fontFamily: 'monospace', letterSpacing: '2px', marginBottom: '5px' }}>REACTION TIME</p>
 
-      <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px', fontFamily: 'monospace', letterSpacing: '2px', marginBottom: '5px' }}>REACTION TIME</p>
       <svg width={W} height={H_CHART} style={{ display: 'block' }}>
-        <polyline points={chartPts} fill="none" stroke="#4ade80" strokeWidth="2" strokeLinejoin="round"/>
+        <polyline points={cPts} fill="none" stroke="#4ade80" strokeWidth="2" strokeLinejoin="round"/>
         {data.map((v, i) => {
           const x = PAD + (i / (data.length - 1)) * (W - PAD * 2);
           const y = H_CHART - PAD - ((v - min) / range) * (H_CHART - PAD * 2);
           return <circle key={i} cx={x} cy={y} r={2.5} fill="#4ade80" opacity={0.85}/>;
         })}
-        <text x={PAD} y={H_CHART-2} fill="rgba(255,255,255,0.2)" fontSize="7" fontFamily="monospace">shot 1</text>
-        <text x={W-PAD-24} y={H_CHART-2} fill="rgba(255,255,255,0.2)" fontSize="7" fontFamily="monospace">latest</text>
+        <text x={PAD} y={H_CHART-2} fill="rgba(255,255,255,0.18)" fontSize="7" fontFamily="monospace">shot 1</text>
+        <text x={W-PAD-24} y={H_CHART-2} fill="rgba(255,255,255,0.18)" fontSize="7" fontFamily="monospace">latest</text>
       </svg>
     </div>
   );
 }
 
-// ── MAIN ─────────────────────────────────────────────────────────
 export default function HomeScreen({ onStartGame, onHistory }) {
   const [selected, setSelected] = useState('medium');
   const [hovered,  setHovered]  = useState(null);
 
   return (
     <div style={{
-      minHeight: '100vh',
+      width: '100vw', minHeight: '100vh',
       background: 'radial-gradient(ellipse at 50% 38%, #6a9e30 0%, #3a6010 18%, #1e3a06 42%, #0e1e03 100%)',
       position: 'relative', overflow: 'hidden',
       display: 'flex', flexDirection: 'column',
-      fontFamily: 'sans-serif',
     }}>
 
-      {/* Fog atmosphere */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 22%, rgba(200,255,120,0.1) 0%, transparent 55%)' }} />
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '200px', pointerEvents: 'none', background: 'linear-gradient(to top, rgba(80,160,30,0.07) 0%, transparent 100%)' }} />
+      {/* Fog */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 22%, rgba(200,255,120,0.1) 0%, transparent 55%)' }}/>
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '200px', pointerEvents: 'none', background: 'linear-gradient(to top, rgba(80,160,30,0.07) 0%, transparent 100%)' }}/>
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.52) 100%)' }}/>
 
-      {/* Green accent borders */}
-      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '7px', pointerEvents: 'none', background: 'linear-gradient(to bottom, transparent 5%, #4ade80 30%, #22c55e 50%, #4ade80 70%, transparent 95%)', boxShadow: '0 0 22px rgba(74,222,128,0.45)' }} />
-      <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '7px', pointerEvents: 'none', background: 'linear-gradient(to bottom, transparent 5%, #4ade80 30%, #22c55e 50%, #4ade80 70%, transparent 95%)', boxShadow: '0 0 22px rgba(74,222,128,0.45)' }} />
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '5px', pointerEvents: 'none', background: 'linear-gradient(to right, transparent, #4ade80, #22c55e, #4ade80, transparent)', boxShadow: '0 0 18px rgba(74,222,128,0.45)' }} />
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '5px', pointerEvents: 'none', background: 'linear-gradient(to right, transparent, #4ade80, #22c55e, #4ade80, transparent)', boxShadow: '0 0 18px rgba(74,222,128,0.45)' }} />
+      {/* Green edge borders */}
+      <div style={{ position:'absolute', left:0, top:0, bottom:0, width:'7px', pointerEvents:'none', background:'linear-gradient(to bottom,transparent 5%,#4ade80 30%,#22c55e 50%,#4ade80 70%,transparent 95%)', boxShadow:'0 0 22px rgba(74,222,128,0.45)' }}/>
+      <div style={{ position:'absolute', right:0, top:0, bottom:0, width:'7px', pointerEvents:'none', background:'linear-gradient(to bottom,transparent 5%,#4ade80 30%,#22c55e 50%,#4ade80 70%,transparent 95%)', boxShadow:'0 0 22px rgba(74,222,128,0.45)' }}/>
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:'5px', pointerEvents:'none', background:'linear-gradient(to right,transparent,#4ade80,#22c55e,#4ade80,transparent)', boxShadow:'0 0 18px rgba(74,222,128,0.45)' }}/>
+      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'5px', pointerEvents:'none', background:'linear-gradient(to right,transparent,#4ade80,#22c55e,#4ade80,transparent)', boxShadow:'0 0 18px rgba(74,222,128,0.45)' }}/>
 
-      {/* Vignette */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.55) 100%)' }} />
-
-      {/* TITLE — Fall Guys 3D style */}
-      <div style={{ textAlign: 'center', paddingTop: '22px', position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <div style={{ width: 'min(700px, 90vw)' }}>
-          <FallGuysText text="PICKLEBALL" fontSize={54} color="#d4f54e" strokeColor="#1a3000" strokeWidth={9} />
+      {/* TITLE — constrained width so it never clips */}
+      <div style={{ textAlign:'center', paddingTop:'22px', position:'relative', zIndex:2 }}>
+        <div style={{ maxWidth:'900px', margin:'0 auto', padding:'0 40px' }}>
+          <FallGuysText text="PICKLEBALL" fontSize={62} color="#d4f54e" strokeColor="#1a3000" strokeWidth={10} width={820}/>
         </div>
-        <div style={{ width: 'min(500px, 70vw)', marginTop: '-10px' }}>
-          <FallGuysText text="SIMULATOR" fontSize={36} color="#a3e635" strokeColor="#1a3000" strokeWidth={7} />
+        <div style={{ maxWidth:'640px', margin:'-12px auto 0', padding:'0 40px' }}>
+          <FallGuysText text="SIMULATOR" fontSize={40} color="#a3e635" strokeColor="#1a3000" strokeWidth={8} width={580}/>
         </div>
-        <p style={{ color: 'rgba(150,220,80,0.45)', fontSize: '9px', fontFamily: 'monospace', letterSpacing: '6px', textTransform: 'uppercase', marginTop: '2px' }}>
+        <p style={{ color:'rgba(150,220,80,0.45)', fontSize:'10px', fontFamily:'monospace', letterSpacing:'6px', textTransform:'uppercase', marginTop:'4px' }}>
           3D · Real Physics · Analytics
         </p>
       </div>
 
-      {/* 3-panel layout */}
+      {/* Main 3-panel — centered, max 1080px */}
       <div style={{
-        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: '32px', padding: '10px 56px 16px',
+        flex: 1,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: '48px',
+        padding: '12px 80px 16px',
+        maxWidth: '1080px',
+        margin: '0 auto',
+        width: '100%',
         position: 'relative', zIndex: 2,
       }}>
 
@@ -285,15 +237,15 @@ export default function HomeScreen({ onStartGame, onHistory }) {
         <StatsPanel />
 
         {/* CENTER */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '0 0 240px' }}>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', flex:'0 0 260px' }}>
           <PaddleHero />
-          <p style={{ color: 'rgba(160,230,80,0.3)', fontSize: '9px', fontFamily: 'monospace', letterSpacing: '4px', textTransform: 'uppercase', marginTop: '4px' }}>
+          <p style={{ color:'rgba(160,230,80,0.3)', fontSize:'9px', fontFamily:'monospace', letterSpacing:'4px', textTransform:'uppercase', marginTop:'6px' }}>
             Ready · Set · Play
           </p>
         </div>
 
         {/* RIGHT */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: '0 0 178px' }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:'10px', flex:'0 0 190px' }}>
           {difficulties.map((d) => {
             const isSel = selected === d.id;
             const isHov = hovered === d.id;
@@ -303,60 +255,53 @@ export default function HomeScreen({ onStartGame, onHistory }) {
                 onMouseEnter={() => setHovered(d.id)}
                 onMouseLeave={() => setHovered(null)}
                 style={{
-                  padding: '13px 18px',
-                  borderRadius: '14px',
-                  border: `2.5px solid ${isSel ? d.color : 'rgba(100,200,60,0.22)'}`,
+                  padding:'14px 18px', borderRadius:'14px',
+                  border:`2.5px solid ${isSel ? d.color : 'rgba(100,200,60,0.22)'}`,
                   background: isSel
-                    ? `linear-gradient(135deg, ${d.color}28, ${d.color}0a)`
-                    : isHov ? 'rgba(80,160,30,0.12)' : 'rgba(10,25,5,0.55)',
+                    ? `linear-gradient(135deg,${d.color}28,${d.color}0a)`
+                    : isHov ? 'rgba(80,160,30,0.12)' : 'rgba(10,25,5,0.6)',
                   color: isSel ? d.color : 'rgba(180,230,100,0.5)',
-                  fontFamily: '"Arial Black", Arial, sans-serif',
-                  fontSize: '14px', fontWeight: '900',
-                  letterSpacing: '3px', cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  boxShadow: isSel ? `0 0 20px ${d.glow}, inset 0 1px 0 rgba(255,255,255,0.08)` : 'none',
-                  transform: isSel || isHov ? 'scale(1.04)' : 'scale(1)',
-                  backdropFilter: 'blur(6px)',
-                  textAlign: 'center',
-                  position: 'relative', overflow: 'hidden',
-                  WebkitTextStroke: isSel ? `1px ${d.color}` : 'none',
+                  fontFamily:'"Arial Black",Arial,sans-serif',
+                  fontSize:'15px', fontWeight:'900',
+                  letterSpacing:'3px', cursor:'pointer',
+                  transition:'all 0.15s ease',
+                  boxShadow: isSel ? `0 0 20px ${d.glow},inset 0 1px 0 rgba(255,255,255,0.08)` : 'none',
+                  transform: isSel||isHov ? 'scale(1.04)' : 'scale(1)',
+                  backdropFilter:'blur(6px)', textAlign:'center',
+                  position:'relative', overflow:'hidden',
                 }}
               >
-                {isSel && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: d.color, boxShadow: `0 0 8px ${d.color}` }} />}
+                {isSel && <div style={{ position:'absolute', left:0, top:0, bottom:0, width:'3px', background:d.color, boxShadow:`0 0 8px ${d.color}` }}/>}
                 {d.label}
               </button>
             );
           })}
 
-          <div style={{ height: '1px', background: 'rgba(100,200,60,0.15)', margin: '2px 0' }} />
+          <div style={{ height:'1px', background:'rgba(100,200,60,0.15)', margin:'2px 0' }}/>
 
-          {/* PLAY button — Fall Guys style */}
+          {/* PLAY button */}
           <button
             onClick={() => onStartGame(selected)}
             onMouseEnter={() => setHovered('play')}
             onMouseLeave={() => setHovered(null)}
             style={{
-              padding: '0',
-              borderRadius: '16px',
-              border: 'none',
-              background: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              transform: hovered === 'play' ? 'scale(1.07) translateY(-2px)' : 'scale(1)',
-              filter: hovered === 'play' ? 'brightness(1.15)' : 'brightness(1)',
+              borderRadius:'16px', border:'none', background:'none', cursor:'pointer',
+              transition:'all 0.15s ease',
+              transform: hovered==='play' ? 'scale(1.07) translateY(-2px)' : 'scale(1)',
+              filter: hovered==='play' ? 'brightness(1.15)' : 'brightness(1)',
+              padding: 0,
             }}
           >
             <div style={{
-              padding: '18px 24px',
-              borderRadius: '16px',
-              background: 'linear-gradient(180deg, #22c55e 0%, #16a34a 50%, #0f7a30 100%)',
-              border: '3px solid #1a3000',
-              boxShadow: hovered === 'play'
-                ? '0 0 32px rgba(74,222,128,0.6), 0 6px 0 #0a4a18, 0 8px 16px rgba(0,0,0,0.4)'
-                : '0 4px 0 #0a4a18, 0 6px 16px rgba(0,0,0,0.35)',
-              position: 'relative',
+              padding:'6px 18px 12px',
+              borderRadius:'16px',
+              background:'linear-gradient(180deg,#22c55e 0%,#16a34a 50%,#0f7a30 100%)',
+              border:'3px solid #0d2a0a',
+              boxShadow: hovered==='play'
+                ? '0 0 32px rgba(74,222,128,0.6),0 6px 0 #083a10,0 8px 20px rgba(0,0,0,0.4)'
+                : '0 5px 0 #083a10,0 7px 18px rgba(0,0,0,0.35)',
             }}>
-              <FallGuysText text="PLAY!" fontSize={28} color="#d4f54e" strokeColor="#1a3000" strokeWidth={7} />
+              <FallGuysText text="PLAY!" fontSize={32} color="#d4f54e" strokeColor="#0d2a0a" strokeWidth={8} width={190}/>
             </div>
           </button>
 
@@ -365,14 +310,13 @@ export default function HomeScreen({ onStartGame, onHistory }) {
             onMouseEnter={() => setHovered('hist')}
             onMouseLeave={() => setHovered(null)}
             style={{
-              padding: '10px', borderRadius: '10px',
-              border: '1px solid rgba(100,200,60,0.18)',
-              background: 'rgba(10,25,5,0.5)',
-              color: hovered === 'hist' ? 'rgba(150,220,80,0.9)' : 'rgba(100,180,60,0.4)',
-              fontFamily: 'monospace', fontSize: '10px',
-              letterSpacing: '2px', cursor: 'pointer',
-              transition: 'all 0.15s ease', textAlign: 'center',
-              backdropFilter: 'blur(4px)',
+              padding:'10px', borderRadius:'10px',
+              border:'1px solid rgba(100,200,60,0.18)',
+              background:'rgba(10,25,5,0.5)',
+              color: hovered==='hist' ? 'rgba(150,220,80,0.9)' : 'rgba(100,180,60,0.4)',
+              fontFamily:'monospace', fontSize:'10px',
+              letterSpacing:'2px', cursor:'pointer',
+              transition:'all 0.15s ease', textAlign:'center',
             }}
           >
             MATCH HISTORY
@@ -381,8 +325,8 @@ export default function HomeScreen({ onStartGame, onHistory }) {
       </div>
 
       {/* Controls hint */}
-      <div style={{ textAlign: 'center', paddingBottom: '12px', position: 'relative', zIndex: 2 }}>
-        <p style={{ color: 'rgba(120,200,60,0.28)', fontSize: '9px', fontFamily: 'monospace', letterSpacing: '3px', textTransform: 'uppercase' }}>
+      <div style={{ textAlign:'center', paddingBottom:'12px', position:'relative', zIndex:2 }}>
+        <p style={{ color:'rgba(120,200,60,0.28)', fontSize:'9px', fontFamily:'monospace', letterSpacing:'3px', textTransform:'uppercase' }}>
           Arrows Move · Space Serve · Shift Drive · Ctrl Dink · Q Lob · A/D Aim
         </p>
       </div>
