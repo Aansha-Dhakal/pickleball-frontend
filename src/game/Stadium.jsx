@@ -1,232 +1,233 @@
+import { useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-// Lightweight outdoor night stadium — no heavy geometry, pure atmosphere
+// Waterfall particle system
+function WaterfallParticles({ position }) {
+  const meshRef = useRef();
+  const positions = useRef([]);
+  const count = 80;
+
+  // Init particles
+  if (positions.current.length === 0) {
+    for (let i = 0; i < count; i++) {
+      positions.current.push({
+        x: (Math.random() - 0.5) * 3,
+        y: 18 + Math.random() * 8,
+        z: 0,
+        vy: -(2 + Math.random() * 4),
+        life: Math.random(),
+      });
+    }
+  }
+
+  useFrame((_, delta) => {
+    if (!meshRef.current) return;
+    const pos = meshRef.current.geometry.attributes.position;
+    positions.current.forEach((p, i) => {
+      p.y += p.vy * delta * 2;
+      p.x += (Math.random() - 0.5) * 0.05;
+      p.life -= delta * 0.3;
+      if (p.y < 0 || p.life <= 0) {
+        p.x = (Math.random() - 0.5) * 3;
+        p.y = 18 + Math.random() * 4;
+        p.vy = -(2 + Math.random() * 4);
+        p.life = 1;
+      }
+      pos.setXYZ(i, p.x, p.y, p.z);
+    });
+    pos.needsUpdate = true;
+  });
+
+  const geo = new THREE.BufferGeometry();
+  const posArr = new Float32Array(count * 3);
+  positions.current.forEach((p, i) => {
+    posArr[i * 3]     = p.x;
+    posArr[i * 3 + 1] = p.y;
+    posArr[i * 3 + 2] = p.z;
+  });
+  geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+
+  return (
+    <group position={position}>
+      <points ref={meshRef} geometry={geo}>
+        <pointsMaterial color="#a0d8ff" size={0.18} transparent opacity={0.6} sizeAttenuation />
+      </points>
+      {/* Mist pool at bottom */}
+      <mesh position={[0, 0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[4, 16]} />
+        <meshStandardMaterial color="#c8e8ff" transparent opacity={0.08} />
+      </mesh>
+    </group>
+  );
+}
+
+// Rocky mountain cliff
+function RockCliff({ position, rotation = [0, 0, 0], scale = [1, 1, 1] }) {
+  return (
+    <group position={position} rotation={rotation} scale={scale}>
+      <mesh position={[0, 4, 0]} castShadow receiveShadow>
+        <boxGeometry args={[8, 12, 4]} />
+        <meshStandardMaterial color="#4a4a3a" roughness={0.95} metalness={0.05} />
+      </mesh>
+      <mesh position={[2, 7, 0.5]} castShadow>
+        <boxGeometry args={[5, 8, 3]} />
+        <meshStandardMaterial color="#3e3e2e" roughness={0.95} />
+      </mesh>
+      <mesh position={[-1, 9, 0]} castShadow>
+        <boxGeometry args={[4, 5, 3.5]} />
+        <meshStandardMaterial color="#525240" roughness={0.9} />
+      </mesh>
+      {/* Moss patches */}
+      <mesh position={[0, 5, 2.1]}>
+        <boxGeometry args={[6, 3, 0.2]} />
+        <meshStandardMaterial color="#2d5a1a" roughness={0.9} transparent opacity={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+// Mountain tree
+function Tree({ position, scale = 1 }) {
+  return (
+    <group position={position} scale={[scale, scale, scale]}>
+      <mesh position={[0, 1.5, 0]} castShadow>
+        <cylinderGeometry args={[0.18, 0.25, 3, 6]} />
+        <meshStandardMaterial color="#3d2b1a" roughness={0.95} />
+      </mesh>
+      <mesh position={[0, 4, 0]} castShadow>
+        <coneGeometry args={[1.4, 3.5, 7]} />
+        <meshStandardMaterial color="#1a4a10" roughness={0.8} />
+      </mesh>
+      <mesh position={[0, 5.8, 0]} castShadow>
+        <coneGeometry args={[1.0, 2.8, 7]} />
+        <meshStandardMaterial color="#1e5a14" roughness={0.8} />
+      </mesh>
+      <mesh position={[0, 7.2, 0]} castShadow>
+        <coneGeometry args={[0.65, 2.2, 7]} />
+        <meshStandardMaterial color="#236618" roughness={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
+// Fog plane
+function FogPlane({ y, opacity, color = '#c8ddc8' }) {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, y, 0]}>
+      <planeGeometry args={[120, 120]} />
+      <meshStandardMaterial color={color} transparent opacity={opacity} depthWrite={false} />
+    </mesh>
+  );
+}
+
 export default function Stadium() {
+  const mistRef1 = useRef();
+  const mistRef2 = useRef();
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    if (mistRef1.current) {
+      mistRef1.current.material.opacity = 0.04 + Math.sin(t * 0.3) * 0.02;
+    }
+    if (mistRef2.current) {
+      mistRef2.current.material.opacity = 0.03 + Math.sin(t * 0.2 + 1) * 0.015;
+    }
+  });
+
   return (
     <group>
-
-      {/* ── GROUND PLANE ── */}
+      {/* ── GROUND ── */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
         <planeGeometry args={[200, 200]} />
-        <meshStandardMaterial color="#0a0f1a" roughness={1} />
+        <meshStandardMaterial color="#1a2e0a" roughness={1} />
       </mesh>
 
-      {/* Court surround — dark rubberized look */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]}>
-        <planeGeometry args={[36, 58]} />
-        <meshStandardMaterial color="#111827" roughness={0.95} />
+      {/* Grassy surround */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow>
+        <planeGeometry args={[44, 60]} />
+        <meshStandardMaterial color="#1e380a" roughness={0.95} />
       </mesh>
 
-      {/* ── 4 STADIUM LIGHT POLES (just poles + point lights, no geometry crowd) ── */}
-      {[[-13, -20], [13, -20], [-13, 20], [13, 20]].map(([x, z], i) => (
+      {/* ── MOUNTAIN CLIFFS — background ── */}
+      <RockCliff position={[-35, 0, -40]} rotation={[0, 0.3, 0]} scale={[1.8, 2, 1.5]} />
+      <RockCliff position={[30, 0, -45]} rotation={[0, -0.4, 0]} scale={[2, 2.2, 1.6]} />
+      <RockCliff position={[0, 0, -50]} rotation={[0, 0.1, 0]} scale={[2.5, 2.5, 2]} />
+      <RockCliff position={[-20, 0, -35]} rotation={[0, 0.6, 0]} scale={[1.4, 1.8, 1.3]} />
+      <RockCliff position={[20, 0, -38]} rotation={[0, -0.2, 0]} scale={[1.6, 1.9, 1.4]} />
+
+      {/* Side cliffs */}
+      <RockCliff position={[-40, 0, 0]} rotation={[0, Math.PI / 2, 0]} scale={[1.5, 1.8, 1.2]} />
+      <RockCliff position={[40, 0, 0]}  rotation={[0, -Math.PI / 2, 0]} scale={[1.5, 1.8, 1.2]} />
+
+      {/* ── WATERFALL — back left cliff ── */}
+      <WaterfallParticles position={[-32, 0, -38]} />
+      {/* Waterfall stream */}
+      <mesh position={[-32, 9, -38]}>
+        <boxGeometry args={[1.5, 18, 0.3]} />
+        <meshStandardMaterial color="#a0d0ff" transparent opacity={0.25} />
+      </mesh>
+      {/* Water pool glow */}
+      <pointLight position={[-32, 1, -38]} intensity={0.6} color="#80c8ff" distance={12} decay={2} />
+
+      {/* ── TREES ── */}
+      {[
+        [-28, 0, -28], [-22, 0, -30], [-18, 0, -25],
+        [22, 0, -28],  [26, 0, -32],  [18, 0, -26],
+        [-30, 0, -15], [30, 0, -15],
+        [-30, 0, 10],  [30, 0, 10],
+        [-26, 0, 22],  [26, 0, 22],
+      ].map(([x, y, z], i) => (
+        <Tree key={i} position={[x, y, z]} scale={0.8 + Math.random() * 0.6} />
+      ))}
+
+      {/* ── LIGHT POLES (minimal — 2 only) ── */}
+      {[[-13, -20], [13, -20]].map(([x, z], i) => (
         <group key={i} position={[x, 0, z]}>
-          {/* Pole */}
           <mesh position={[0, 7, 0]}>
             <cylinderGeometry args={[0.12, 0.18, 14, 6]} />
-            <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.3} />
+            <meshStandardMaterial color="#4a4a3a" metalness={0.5} roughness={0.6} />
           </mesh>
-          {/* Arm */}
-          <mesh position={[x > 0 ? -0.8 : 0.8, 13.5, 0]} rotation={[0, 0, x > 0 ? 0.3 : -0.3]}>
-            <cylinderGeometry args={[0.07, 0.07, 2, 6]} />
-            <meshStandardMaterial color="#334155" metalness={0.6} />
-          </mesh>
-          {/* Light housing */}
-          <mesh position={[x > 0 ? -1.4 : 1.4, 13.8, 0]}>
-            <boxGeometry args={[0.8, 0.3, 0.5]} />
-            <meshStandardMaterial color="#1e293b" metalness={0.5} />
-          </mesh>
-          {/* Actual light */}
-          <pointLight
-            position={[x > 0 ? -1.4 : 1.4, 13.5, 0]}
-            intensity={1.8}
-            color="#fffbeb"
-            distance={55}
-            decay={1.4}
-          />
-          {/* Lens glow */}
-          <mesh position={[x > 0 ? -1.4 : 1.4, 13.9, 0.25]}>
-            <sphereGeometry args={[0.18, 8, 8]} />
+          <pointLight position={[0, 13.5, 0]} intensity={1.4} color="#fffbeb" distance={45} decay={1.5} />
+          <mesh position={[0, 13.8, 0]}>
+            <sphereGeometry args={[0.2, 8, 8]} />
             <meshStandardMaterial color="#fef9c3" emissive="#fef9c3" emissiveIntensity={3} />
           </mesh>
         </group>
       ))}
 
-      {/* ── LOW PERIMETER FENCE / BARRIER ── */}
-      {/* Left barrier */}
-      <mesh position={[-12.5, 0.5, 0]}>
-        <boxGeometry args={[0.25, 1, 50]} />
-        <meshStandardMaterial color="#1e3a5f" roughness={0.8} metalness={0.2} />
+      {/* ── ANIMATED MIST LAYERS ── */}
+      <mesh ref={mistRef1} rotation={[-Math.PI / 2, 0, 0]} position={[0, 1.5, -10]}>
+        <planeGeometry args={[80, 50]} />
+        <meshStandardMaterial color="#c8e8d0" transparent opacity={0.05} depthWrite={false} />
       </mesh>
-      {/* Right barrier */}
-      <mesh position={[12.5, 0.5, 0]}>
-        <boxGeometry args={[0.25, 1, 50]} />
-        <meshStandardMaterial color="#1e3a5f" roughness={0.8} metalness={0.2} />
-      </mesh>
-      {/* Far end barrier */}
-      <mesh position={[0, 0.5, -25]}>
-        <boxGeometry args={[26, 1, 0.25]} />
-        <meshStandardMaterial color="#1e3a5f" roughness={0.8} metalness={0.2} />
-      </mesh>
-      {/* Near end barrier — lower so player can see over it */}
-      <mesh position={[0, 0.3, 25]}>
-        <boxGeometry args={[26, 0.6, 0.25]} />
-        <meshStandardMaterial color="#1e3a5f" roughness={0.8} metalness={0.2} />
+      <mesh ref={mistRef2} rotation={[-Math.PI / 2, 0, 0]} position={[0, 3, -20]}>
+        <planeGeometry args={[100, 60]} />
+        <meshStandardMaterial color="#d0e8c0" transparent opacity={0.04} depthWrite={false} />
       </mesh>
 
-      {/* ── DISTANT CROWD GLOW — fake ambient crowd with colored fog planes ── */}
-      {/* Left stand glow */}
-      <mesh position={[-18, 4, 0]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[50, 8]} />
-        <meshStandardMaterial
-          color="#1d4ed8"
-          emissive="#1e40af"
-          emissiveIntensity={0.25}
-          transparent
-          opacity={0.18}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-        />
+      {/* Static fog layers at different heights */}
+      <FogPlane y={0.8}  opacity={0.03} color="#c8ddc8" />
+      <FogPlane y={2.5}  opacity={0.025} color="#d0e8d0" />
+      <FogPlane y={5}    opacity={0.02} color="#c0d8c0" />
+
+      {/* ── PERIMETER BARRIER ── */}
+      <mesh position={[-13, 0.5, 0]}>
+        <boxGeometry args={[0.3, 1, 52]} />
+        <meshStandardMaterial color="#2a4a1a" roughness={0.9} />
       </mesh>
-      {/* Right stand glow */}
-      <mesh position={[18, 4, 0]} rotation={[0, -Math.PI / 2, 0]}>
-        <planeGeometry args={[50, 8]} />
-        <meshStandardMaterial
-          color="#dc2626"
-          emissive="#b91c1c"
-          emissiveIntensity={0.25}
-          transparent
-          opacity={0.18}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-        />
+      <mesh position={[13, 0.5, 0]}>
+        <boxGeometry args={[0.3, 1, 52]} />
+        <meshStandardMaterial color="#2a4a1a" roughness={0.9} />
       </mesh>
-      {/* Far end stand glow */}
-      <mesh position={[0, 4, -28]} rotation={[0, 0, 0]}>
-        <planeGeometry args={[30, 8]} />
-        <meshStandardMaterial
-          color="#7c3aed"
-          emissive="#6d28d9"
-          emissiveIntensity={0.2}
-          transparent
-          opacity={0.15}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-        />
+      <mesh position={[0, 0.5, -27]}>
+        <boxGeometry args={[27, 1, 0.3]} />
+        <meshStandardMaterial color="#2a4a1a" roughness={0.9} />
       </mesh>
-
-      {/* ── SIMPLIFIED CROWD SILHOUETTES (billboards, very cheap) ── */}
-      {/* Left side crowd row */}
-      {Array.from({ length: 12 }).map((_, i) => {
-        const z = -22 + i * 4;
-        return (
-          <group key={`lc-${i}`} position={[-15, 1.8, z]}>
-            <mesh rotation={[0, Math.PI / 2, 0]}>
-              <planeGeometry args={[0.5, 1.4]} />
-              <meshStandardMaterial
-                color={['#1d4ed8','#dc2626','#16a34a','#ca8a04','#7c3aed'][i % 5]}
-                emissive={['#1e40af','#b91c1c','#15803d','#b45309','#6d28d9'][i % 5]}
-                emissiveIntensity={0.4}
-                side={THREE.DoubleSide}
-                transparent opacity={0.85}
-              />
-            </mesh>
-            {/* Head */}
-            <mesh position={[0, 0.85, 0]}>
-              <sphereGeometry args={[0.18, 6, 6]} />
-              <meshStandardMaterial
-                color={['#fbbf24','#f87171','#86efac','#fde68a','#c4b5fd'][i % 5]}
-                emissive={['#d97706','#dc2626','#16a34a','#d97706','#7c3aed'][i % 5]}
-                emissiveIntensity={0.3}
-              />
-            </mesh>
-          </group>
-        );
-      })}
-
-      {/* Right side crowd row */}
-      {Array.from({ length: 12 }).map((_, i) => {
-        const z = -22 + i * 4;
-        return (
-          <group key={`rc-${i}`} position={[15, 1.8, z]}>
-            <mesh rotation={[0, -Math.PI / 2, 0]}>
-              <planeGeometry args={[0.5, 1.4]} />
-              <meshStandardMaterial
-                color={['#7c3aed','#0891b2','#be185d','#1d4ed8','#dc2626'][i % 5]}
-                emissive={['#6d28d9','#0e7490','#9d174d','#1e40af','#b91c1c'][i % 5]}
-                emissiveIntensity={0.4}
-                side={THREE.DoubleSide}
-                transparent opacity={0.85}
-              />
-            </mesh>
-            <mesh position={[0, 0.85, 0]}>
-              <sphereGeometry args={[0.18, 6, 6]} />
-              <meshStandardMaterial
-                color={['#fbbf24','#f87171','#86efac','#fde68a','#c4b5fd'][i % 5]}
-                emissive={['#d97706','#dc2626','#16a34a','#d97706','#7c3aed'][i % 5]}
-                emissiveIntensity={0.3}
-              />
-            </mesh>
-          </group>
-        );
-      })}
-
-      {/* Far end crowd row */}
-      {Array.from({ length: 8 }).map((_, i) => {
-        const x = -14 + i * 4;
-        return (
-          <group key={`fc-${i}`} position={[x, 1.8, -26]}>
-            <mesh>
-              <planeGeometry args={[0.5, 1.4]} />
-              <meshStandardMaterial
-                color={['#1d4ed8','#dc2626','#16a34a','#ca8a04'][i % 4]}
-                emissive={['#1e40af','#b91c1c','#15803d','#b45309'][i % 4]}
-                emissiveIntensity={0.4}
-                side={THREE.DoubleSide}
-                transparent opacity={0.85}
-              />
-            </mesh>
-            <mesh position={[0, 0.85, 0]}>
-              <sphereGeometry args={[0.18, 6, 6]} />
-              <meshStandardMaterial color="#fbbf24" emissive="#d97706" emissiveIntensity={0.3} />
-            </mesh>
-          </group>
-        );
-      })}
-
-      {/* ── SCOREBOARD (far end, simple + cheap) ── */}
-      <group position={[0, 9, -27]}>
-        <mesh>
-          <boxGeometry args={[7, 2.5, 0.2]} />
-          <meshStandardMaterial color="#0f172a" roughness={0.8} />
-        </mesh>
-        <mesh position={[0, 0, 0.12]}>
-          <boxGeometry args={[6.4, 2, 0.05]} />
-          <meshStandardMaterial color="#1e3a5f" emissive="#1e40af" emissiveIntensity={0.5} />
-        </mesh>
-        {/* PICKLEBALL banner strip */}
-        <mesh position={[0, 0.6, 0.15]}>
-          <boxGeometry args={[5, 0.5, 0.02]} />
-          <meshStandardMaterial color="#a3e635" emissive="#84cc16" emissiveIntensity={1.5} />
-        </mesh>
-        {/* Blue score panel */}
-        <mesh position={[-1.5, -0.3, 0.15]}>
-          <boxGeometry args={[1.8, 0.9, 0.02]} />
-          <meshStandardMaterial color="#1d4ed8" emissive="#3b82f6" emissiveIntensity={1} />
-        </mesh>
-        {/* Red score panel */}
-        <mesh position={[1.5, -0.3, 0.15]}>
-          <boxGeometry args={[1.8, 0.9, 0.02]} />
-          <meshStandardMaterial color="#dc2626" emissive="#ef4444" emissiveIntensity={1} />
-        </mesh>
-        {/* Support pole */}
-        <mesh position={[0, -4, 0]}>
-          <cylinderGeometry args={[0.15, 0.2, 8, 6]} />
-          <meshStandardMaterial color="#334155" metalness={0.6} />
-        </mesh>
-        {/* Scoreboard point light */}
-        <pointLight position={[0, 0, 2]} intensity={0.6} color="#a3e635" distance={15} />
-      </group>
-
+      <mesh position={[0, 0.3, 27]}>
+        <boxGeometry args={[27, 0.6, 0.3]} />
+        <meshStandardMaterial color="#2a4a1a" roughness={0.9} />
+      </mesh>
     </group>
   );
 }

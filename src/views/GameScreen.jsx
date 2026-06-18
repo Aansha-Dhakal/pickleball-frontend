@@ -1,6 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Stars } from '@react-three/drei';
 import * as THREE from 'three';
 
 import Court, { COURT_W, COURT_L, NET_H, KITCHEN_DEPTH } from '../game/Court';
@@ -466,14 +465,14 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
 
       {/* Canvas */}
       <Canvas shadows camera={{ position: [0, 9, 24], fov: 58, near: 0.1, far: 300 }} gl={{ antialias: true }}>
-        <ambientLight intensity={0.45} />
-        <directionalLight position={[8, 22, 8]} intensity={1.4} castShadow
+        <ambientLight intensity={0.55} color="#c8e8c8" />
+        <directionalLight position={[8, 22, 8]} intensity={1.1} castShadow color="#e8f8e0"
           shadow-mapSize-width={2048} shadow-mapSize-height={2048}
           shadow-camera-far={80} shadow-camera-left={-28} shadow-camera-right={28}
           shadow-camera-top={35} shadow-camera-bottom={-35} />
-        <pointLight position={[-12, 14, -12]} intensity={0.5} color="#3b82f6" />
-        <pointLight position={[12,  14,  12]} intensity={0.4} color="#ef4444" />
-        <fog attach="fog" args={['#1e1b4b', 55, 130]} />
+        <pointLight position={[-32, 4, -38]} intensity={0.8} color="#80c8ff" distance={20} decay={2} />
+        <pointLight position={[0, 8, -10]} intensity={0.3} color="#a0d8a0" distance={30} decay={2} />
+        <fog attach="fog" args={['#1a2e10', 35, 90]} />
 
         <Stadium />
         <Court />

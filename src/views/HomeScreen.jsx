@@ -5,67 +5,101 @@ const BALL_SRC   = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAYAAA
 
 const MATCH_DATA = {
   shots: [
-    { x: 2.1, z: -8.3, type: 'DRIVE' },
-    { x: -3.4, z: -12.1, type: 'DINK' },
-    { x: 5.2, z: -6.8, type: 'VOLLEY' },
-    { x: -1.2, z: -14.5, type: 'DRIVE' },
-    { x: 3.8, z: -9.2, type: 'DINK' },
-    { x: -4.1, z: -7.6, type: 'DRIVE' },
-    { x: 0.5, z: -11.3, type: 'LOB' },
-    { x: 2.9, z: -5.4, type: 'DINK' },
-    { x: -2.7, z: -13.8, type: 'DRIVE' },
-    { x: 4.4, z: -10.1, type: 'VOLLEY' },
-    { x: -0.8, z: -8.9, type: 'DINK' },
-    { x: 1.6, z: -15.2, type: 'DRIVE' },
-    { x: -3.9, z: -6.3, type: 'LOB' },
-    { x: 0.3, z: -12.7, type: 'DINK' },
+    { x: 2.1, z: -8.3, type: 'DRIVE' }, { x: -3.4, z: -12.1, type: 'DINK' },
+    { x: 5.2, z: -6.8, type: 'VOLLEY' }, { x: -1.2, z: -14.5, type: 'DRIVE' },
+    { x: 3.8, z: -9.2, type: 'DINK' }, { x: -4.1, z: -7.6, type: 'DRIVE' },
+    { x: 0.5, z: -11.3, type: 'LOB' }, { x: 2.9, z: -5.4, type: 'DINK' },
+    { x: -2.7, z: -13.8, type: 'DRIVE' }, { x: 4.4, z: -10.1, type: 'VOLLEY' },
+    { x: -0.8, z: -8.9, type: 'DINK' }, { x: 1.6, z: -15.2, type: 'DRIVE' },
+    { x: -3.9, z: -6.3, type: 'LOB' }, { x: 0.3, z: -12.7, type: 'DINK' },
     { x: 3.1, z: -4.8, type: 'DRIVE' },
   ],
-  reactionTimes: [820, 740, 910, 680, 750, 820, 700, 640, 780, 720, 690, 760, 810, 670, 730],
+  reactionTimes: [820,740,910,680,750,820,700,640,780,720,690,760,810,670,730],
 };
 
-const SHOT_COLORS = { DRIVE: '#ef4444', DINK: '#4ade80', VOLLEY: '#facc15', LOB: '#818cf8' };
+const SHOT_COLORS = { DRIVE:'#ef4444', DINK:'#4ade80', VOLLEY:'#facc15', LOB:'#818cf8' };
 const difficulties = [
-  { id: 'easy',   label: 'EASY',   color: '#4ade80', glow: 'rgba(74,222,128,0.5)' },
-  { id: 'medium', label: 'MEDIUM', color: '#facc15', glow: 'rgba(250,204,21,0.5)' },
-  { id: 'hard',   label: 'HARD',   color: '#f87171', glow: 'rgba(248,113,113,0.5)' },
+  { id:'easy',   label:'EASY',   color:'#4ade80', dark:'#166534', glow:'rgba(74,222,128,0.6)' },
+  { id:'medium', label:'MEDIUM', color:'#facc15', dark:'#854d0e', glow:'rgba(250,204,21,0.6)' },
+  { id:'hard',   label:'HARD',   color:'#f87171', dark:'#7f1d1d', glow:'rgba(248,113,113,0.6)' },
 ];
 
-// Fall Guys 3D text — fixed viewBox calculation
-function FallGuysText({ text, fontSize = 48, color = '#d4f54e', strokeColor = '#1a3000', strokeWidth = 8, width = 600 }) {
-  const height = fontSize * 1.5;
+// ── FALL GUYS 3D TEXT ─────────────────────────────────────────────
+function FGText({ text, size=60, fill='#d4f54e', stroke='#1a3000', sw=12, vw=800 }) {
+  const h = size * 1.55;
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ display: 'block', overflow: 'visible' }}>
+    <svg viewBox={`0 0 ${vw} ${h}`} width="100%" style={{display:'block',overflow:'visible'}}>
       <defs>
-        <filter id={`shadow_${text.replace(/\s/g,'_')}`} x="-5%" y="-5%" width="115%" height="130%">
-          <feDropShadow dx="2" dy="4" stdDeviation="3" floodColor="rgba(0,0,0,0.55)" />
+        <filter id={`s${text}`} x="-5%" y="-5%" width="120%" height="140%">
+          <feDropShadow dx="0" dy="5" stdDeviation="4" floodColor="rgba(0,0,0,0.6)"/>
         </filter>
       </defs>
-      <text x="50%" y="78%" textAnchor="middle"
+      {/* thick black outline */}
+      <text x="50%" y="82%" textAnchor="middle"
         fontFamily='"Arial Black","Impact",sans-serif'
-        fontSize={fontSize} fontWeight="900"
-        fill="none" stroke={strokeColor}
-        strokeWidth={strokeWidth * 2.2}
-        strokeLinejoin="round" strokeLinecap="round"
-        paintOrder="stroke"
-      >{text}</text>
-      <text x="50%" y="78%" textAnchor="middle"
+        fontSize={size} fontWeight="900" fill="none"
+        stroke={stroke} strokeWidth={sw*2.5}
+        strokeLinejoin="round" paintOrder="stroke">{text}</text>
+      {/* bottom shadow color for 3D depth */}
+      <text x="50%" y="84%" textAnchor="middle"
         fontFamily='"Arial Black","Impact",sans-serif'
-        fontSize={fontSize} fontWeight="900"
-        fill={color}
-        filter={`url(#shadow_${text.replace(/\s/g,'_')})`}
-        style={{ letterSpacing: '2px' }}
-      >{text}</text>
-      <text x="50%" y="78%" textAnchor="middle"
+        fontSize={size} fontWeight="900"
+        fill={stroke} opacity="0.5">{text}</text>
+      {/* main fill */}
+      <text x="50%" y="82%" textAnchor="middle"
         fontFamily='"Arial Black","Impact",sans-serif'
-        fontSize={fontSize} fontWeight="900"
-        fill="rgba(255,255,255,0.15)"
-        style={{ letterSpacing: '2px' }}
-      >{text}</text>
+        fontSize={size} fontWeight="900"
+        fill={fill} filter={`url(#s${text})`}>{text}</text>
+      {/* top gloss */}
+      <text x="50%" y="82%" textAnchor="middle"
+        fontFamily='"Arial Black","Impact",sans-serif'
+        fontSize={size} fontWeight="900"
+        fill="rgba(255,255,255,0.22)">{text}</text>
     </svg>
   );
 }
 
+// ── FALL GUYS BUTTON ──────────────────────────────────────────────
+function FGButton({ label, color='#4ade80', dark='#166534', glow, selected, hovered, onClick, onMouseEnter, onMouseLeave, big=false }) {
+  const active = selected || hovered;
+  return (
+    <button onClick={onClick} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}
+      style={{
+        width:'100%', border:'none', background:'none', cursor:'pointer', padding:0,
+        transform: hovered ? 'scale(1.05) translateY(-2px)' : selected ? 'scale(1.02)' : 'scale(1)',
+        transition:'all 0.15s ease',
+      }}
+    >
+      <div style={{
+        padding: big ? '4px 20px 10px' : '12px 20px',
+        borderRadius:'18px',
+        background: active
+          ? `linear-gradient(180deg, ${color} 0%, ${dark} 100%)`
+          : 'linear-gradient(180deg,rgba(30,60,15,0.9) 0%,rgba(15,35,5,0.95) 100%)',
+        border: `3px solid ${active ? color : 'rgba(100,200,60,0.25)'}`,
+        boxShadow: active
+          ? `0 0 24px ${glow}, 0 ${big?6:4}px 0 ${dark}, 0 ${big?8:6}px 16px rgba(0,0,0,0.4)`
+          : `0 4px 0 rgba(0,0,0,0.5), 0 6px 12px rgba(0,0,0,0.3)`,
+        backdropFilter:'blur(6px)',
+      }}>
+        {big ? (
+          <FGText text={label} size={30} fill="#d4f54e" stroke="#0d2a0a" sw={7} vw={190}/>
+        ) : (
+          <span style={{
+            display:'block', textAlign:'center',
+            fontFamily:'"Arial Black","Impact",sans-serif',
+            fontSize:'16px', fontWeight:'900', letterSpacing:'3px',
+            color: active ? '#fff' : 'rgba(180,230,100,0.55)',
+            textShadow: active ? `0 2px 4px rgba(0,0,0,0.5)` : 'none',
+            WebkitTextStroke: active ? '0.5px rgba(0,0,0,0.3)' : 'none',
+          }}>{label}</span>
+        )}
+      </div>
+    </button>
+  );
+}
+
+// ── ANIMATED PADDLE ───────────────────────────────────────────────
 function PaddleHero() {
   const paddleRef = useRef(null);
   const ballRef   = useRef(null);
@@ -74,259 +108,226 @@ function PaddleHero() {
   const t         = useRef(0);
 
   useEffect(() => {
-    const animate = () => {
+    const go = () => {
       t.current += 0.018;
-      const bobY = Math.sin(t.current) * 9;
-      const rot  = Math.sin(t.current * 0.6) * 4;
-      if (paddleRef.current) paddleRef.current.style.transform = `translateY(${bobY}px) rotate(${rot}deg)`;
-      const ballBob   = Math.sin(t.current + 1.2) * 11;
-      const ballScale = 1 + Math.sin(t.current + 1.2) * 0.07;
-      if (ballRef.current)   ballRef.current.style.transform = `translateY(${ballBob}px) scale(${ballScale})`;
-      if (glowRef.current)   glowRef.current.style.opacity   = String(0.35 + Math.sin(t.current) * 0.15);
-      frameRef.current = requestAnimationFrame(animate);
+      if (paddleRef.current) paddleRef.current.style.transform = `translateY(${Math.sin(t.current)*10}px) rotate(${Math.sin(t.current*0.6)*5}deg)`;
+      if (ballRef.current)   ballRef.current.style.transform   = `translateY(${Math.sin(t.current+1.3)*13}px) scale(${1+Math.sin(t.current+1.3)*0.07})`;
+      if (glowRef.current)   glowRef.current.style.opacity     = String(0.3+Math.sin(t.current)*0.18);
+      frameRef.current = requestAnimationFrame(go);
     };
-    frameRef.current = requestAnimationFrame(animate);
+    frameRef.current = requestAnimationFrame(go);
     return () => cancelAnimationFrame(frameRef.current);
   }, []);
 
   return (
-    <div style={{ position: 'relative', width: '260px', height: '280px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{position:'relative',width:'280px',height:'300px',display:'flex',alignItems:'center',justifyContent:'center'}}>
       <div ref={glowRef} style={{
-        position: 'absolute', width: '220px', height: '220px', borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(120,220,60,0.22) 0%, transparent 70%)',
-        filter: 'blur(20px)', top: '30px', left: '20px',
-      }} />
+        position:'absolute',width:'240px',height:'240px',borderRadius:'50%',
+        background:'radial-gradient(circle,rgba(140,230,60,0.28) 0%,transparent 70%)',
+        filter:'blur(22px)',top:'28px',left:'18px',
+      }}/>
       <img ref={paddleRef} src={PADDLE_SRC} alt="paddle" style={{
-        width: '210px', height: '210px', objectFit: 'contain',
-        position: 'absolute', top: '35px', left: '25px',
-        filter: 'drop-shadow(0 8px 22px rgba(0,0,0,0.45)) drop-shadow(0 0 12px rgba(80,200,80,0.18))',
-      }} />
+        width:'220px',height:'220px',objectFit:'contain',
+        position:'absolute',top:'35px',left:'30px',
+        filter:'drop-shadow(0 10px 28px rgba(0,0,0,0.5)) drop-shadow(0 0 14px rgba(80,200,80,0.2))',
+      }}/>
       <img ref={ballRef} src={BALL_SRC} alt="ball" style={{
-        width: '72px', height: '72px', objectFit: 'contain',
-        position: 'absolute', top: '8px', right: '8px', zIndex: 3,
-        filter: 'drop-shadow(0 4px 12px rgba(180,220,0,0.55)) drop-shadow(0 2px 4px rgba(0,0,0,0.4))',
-      }} />
+        width:'78px',height:'78px',objectFit:'contain',
+        position:'absolute',top:'5px',right:'5px',zIndex:3,
+        filter:'drop-shadow(0 5px 14px rgba(180,220,0,0.6)) drop-shadow(0 2px 5px rgba(0,0,0,0.45))',
+      }}/>
     </div>
   );
 }
 
+// ── STATS PANEL ───────────────────────────────────────────────────
 function StatsPanel() {
-  const W = 250, H_MAP = 200, H_CHART = 78, PAD = 14;
-  const COURT_W = 20, COURT_L = 22;
-
-  const toSvg = (x, z) => ({
-    sx: PAD + ((x + COURT_W / 2) / COURT_W) * (W - PAD * 2),
-    sy: PAD + (Math.abs(z) / COURT_L) * (H_MAP - PAD * 2) * 0.88,
+  const W=260, HM=210, HC=82, PAD=14;
+  const CW=20, CL=22;
+  const toSvg = (x,z) => ({
+    sx: PAD+((x+CW/2)/CW)*(W-PAD*2),
+    sy: PAD+(Math.abs(z)/CL)*(HM-PAD*2)*0.88,
   });
-
-  const data  = MATCH_DATA.reactionTimes;
-  const max   = Math.max(...data), min = Math.min(...data), range = max - min || 1;
-  const cPts  = data.map((v, i) => {
-    const x = PAD + (i / (data.length - 1)) * (W - PAD * 2);
-    const y = H_CHART - PAD - ((v - min) / range) * (H_CHART - PAD * 2);
+  const data=MATCH_DATA.reactionTimes;
+  const mx=Math.max(...data),mn=Math.min(...data),rng=mx-mn||1;
+  const cPts=data.map((v,i)=>{
+    const x=PAD+(i/(data.length-1))*(W-PAD*2);
+    const y=HC-PAD-((v-mn)/rng)*(HC-PAD*2);
     return `${x},${y}`;
   }).join(' ');
 
   return (
     <div style={{
-      background: 'rgba(12,30,6,0.7)',
-      borderRadius: '18px',
-      border: '1.5px solid rgba(100,200,60,0.28)',
-      padding: '14px',
-      backdropFilter: 'blur(10px)',
-      boxShadow: '0 4px 28px rgba(0,0,0,0.35)',
-      width: '278px', flexShrink: 0,
+      background:'rgba(8,22,4,0.78)',
+      borderRadius:'22px',
+      border:'2px solid rgba(80,180,40,0.3)',
+      padding:'16px',
+      backdropFilter:'blur(12px)',
+      boxShadow:'0 6px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(120,220,60,0.08)',
+      width:'292px', flexShrink:0,
     }}>
-      <p style={{ color: 'rgba(140,210,70,0.75)', fontSize: '9px', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '3px', marginBottom: '8px', borderBottom: '1px solid rgba(100,200,60,0.15)', paddingBottom: '5px' }}>Last Match · Analytics</p>
-      <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '8px', fontFamily: 'monospace', letterSpacing: '2px', marginBottom: '5px' }}>SHOT PLACEMENT</p>
+      <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'10px',paddingBottom:'8px',borderBottom:'1px solid rgba(80,180,40,0.18)'}}>
+        <div style={{width:'8px',height:'8px',borderRadius:'50%',background:'#4ade80',boxShadow:'0 0 6px #4ade80'}}/>
+        <span style={{color:'rgba(140,210,70,0.8)',fontSize:'9px',fontFamily:'monospace',textTransform:'uppercase',letterSpacing:'3px'}}>Last Match · Analytics</span>
+      </div>
 
-      <svg width={W} height={H_MAP} style={{ display: 'block' }}>
-        <rect x={PAD} y={PAD} width={W-PAD*2} height={H_MAP-PAD*2} rx="5" fill="rgba(18,48,8,0.8)" stroke="rgba(100,200,60,0.2)" strokeWidth="1.5"/>
-        <line x1={PAD} y1={H_MAP/2} x2={W-PAD} y2={H_MAP/2} stroke="rgba(255,255,255,0.5)" strokeWidth="2"/>
-        <line x1={PAD} y1={H_MAP/2-26} x2={W-PAD} y2={H_MAP/2-26} stroke="rgba(100,200,60,0.18)" strokeWidth="1" strokeDasharray="3,3"/>
-        <line x1={PAD} y1={H_MAP/2+26} x2={W-PAD} y2={H_MAP/2+26} stroke="rgba(100,200,60,0.18)" strokeWidth="1" strokeDasharray="3,3"/>
-        <line x1={W/2} y1={PAD} x2={W/2} y2={H_MAP-PAD} stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>
-        {MATCH_DATA.shots.map((s, i) => {
-          const { sx, sy } = toSvg(s.x, s.z);
-          return (
-            <g key={i}>
-              <circle cx={sx} cy={sy} r={7} fill={SHOT_COLORS[s.type]} opacity={0.22}/>
-              <circle cx={sx} cy={sy} r={3.5} fill={SHOT_COLORS[s.type]} opacity={0.9}/>
-            </g>
-          );
+      <p style={{color:'rgba(255,255,255,0.25)',fontSize:'8px',fontFamily:'monospace',letterSpacing:'2px',marginBottom:'5px'}}>SHOT PLACEMENT</p>
+      <svg width={W} height={HM} style={{display:'block'}}>
+        <rect x={PAD} y={PAD} width={W-PAD*2} height={HM-PAD*2} rx="6" fill="rgba(15,40,8,0.85)" stroke="rgba(80,180,40,0.22)" strokeWidth="1.5"/>
+        <line x1={PAD} y1={HM/2} x2={W-PAD} y2={HM/2} stroke="rgba(255,255,255,0.55)" strokeWidth="2"/>
+        <line x1={PAD} y1={HM/2-28} x2={W-PAD} y2={HM/2-28} stroke="rgba(80,180,40,0.2)" strokeWidth="1" strokeDasharray="3,3"/>
+        <line x1={PAD} y1={HM/2+28} x2={W-PAD} y2={HM/2+28} stroke="rgba(80,180,40,0.2)" strokeWidth="1" strokeDasharray="3,3"/>
+        <line x1={W/2} y1={PAD} x2={W/2} y2={HM-PAD} stroke="rgba(255,255,255,0.07)" strokeWidth="1"/>
+        {MATCH_DATA.shots.map((s,i)=>{
+          const{sx,sy}=toSvg(s.x,s.z);
+          return(<g key={i}><circle cx={sx} cy={sy} r={8} fill={SHOT_COLORS[s.type]} opacity={0.2}/><circle cx={sx} cy={sy} r={4} fill={SHOT_COLORS[s.type]} opacity={0.92}/></g>);
         })}
-        <text x={W/2} y={H_MAP-4} textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="8" fontFamily="monospace">YOU</text>
-        <text x={W/2} y={PAD+10} textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="8" fontFamily="monospace">AI</text>
+        <text x={W/2} y={HM-4} textAnchor="middle" fill="rgba(255,255,255,0.18)" fontSize="8" fontFamily="monospace">YOU</text>
+        <text x={W/2} y={PAD+10} textAnchor="middle" fill="rgba(255,255,255,0.18)" fontSize="8" fontFamily="monospace">AI</text>
       </svg>
 
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', margin: '6px 0 8px' }}>
-        {Object.entries(SHOT_COLORS).map(([type, color]) => (
-          <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: color }}/>
-            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px', fontFamily: 'monospace' }}>{type}</span>
+      <div style={{display:'flex',gap:'10px',flexWrap:'wrap',margin:'7px 0 9px'}}>
+        {Object.entries(SHOT_COLORS).map(([t,c])=>(
+          <div key={t} style={{display:'flex',alignItems:'center',gap:'4px'}}>
+            <div style={{width:'7px',height:'7px',borderRadius:'50%',background:c}}/>
+            <span style={{color:'rgba(255,255,255,0.28)',fontSize:'8px',fontFamily:'monospace'}}> {t}</span>
           </div>
         ))}
       </div>
 
-      <div style={{ height: '1px', background: 'rgba(100,200,60,0.14)', margin: '2px 0 8px' }}/>
-      <p style={{ color: 'rgba(255,255,255,0.28)', fontSize: '8px', fontFamily: 'monospace', letterSpacing: '2px', marginBottom: '5px' }}>REACTION TIME</p>
-
-      <svg width={W} height={H_CHART} style={{ display: 'block' }}>
-        <polyline points={cPts} fill="none" stroke="#4ade80" strokeWidth="2" strokeLinejoin="round"/>
-        {data.map((v, i) => {
-          const x = PAD + (i / (data.length - 1)) * (W - PAD * 2);
-          const y = H_CHART - PAD - ((v - min) / range) * (H_CHART - PAD * 2);
-          return <circle key={i} cx={x} cy={y} r={2.5} fill="#4ade80" opacity={0.85}/>;
+      <div style={{height:'1px',background:'rgba(80,180,40,0.15)',margin:'2px 0 9px'}}/>
+      <p style={{color:'rgba(255,255,255,0.25)',fontSize:'8px',fontFamily:'monospace',letterSpacing:'2px',marginBottom:'5px'}}>REACTION TIME</p>
+      <svg width={W} height={HC} style={{display:'block'}}>
+        <polyline points={cPts} fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinejoin="round"/>
+        {data.map((v,i)=>{
+          const x=PAD+(i/(data.length-1))*(W-PAD*2);
+          const y=HC-PAD-((v-mn)/rng)*(HC-PAD*2);
+          return <circle key={i} cx={x} cy={y} r={3} fill="#4ade80" opacity={0.88}/>;
         })}
-        <text x={PAD} y={H_CHART-2} fill="rgba(255,255,255,0.18)" fontSize="7" fontFamily="monospace">shot 1</text>
-        <text x={W-PAD-24} y={H_CHART-2} fill="rgba(255,255,255,0.18)" fontSize="7" fontFamily="monospace">latest</text>
+        <text x={PAD} y={HC-2} fill="rgba(255,255,255,0.18)" fontSize="7" fontFamily="monospace">shot 1</text>
+        <text x={W-PAD-24} y={HC-2} fill="rgba(255,255,255,0.18)" fontSize="7" fontFamily="monospace">latest</text>
       </svg>
     </div>
   );
 }
 
+// ── MAIN ─────────────────────────────────────────────────────────
 export default function HomeScreen({ onStartGame, onHistory }) {
   const [selected, setSelected] = useState('medium');
   const [hovered,  setHovered]  = useState(null);
 
   return (
     <div style={{
-      width: '100vw', minHeight: '100vh',
-      background: 'radial-gradient(ellipse at 50% 38%, #6a9e30 0%, #3a6010 18%, #1e3a06 42%, #0e1e03 100%)',
-      position: 'relative', overflow: 'hidden',
-      display: 'flex', flexDirection: 'column',
+      width:'100vw', minHeight:'100vh',
+      background:'radial-gradient(ellipse at 50% 40%, #5a8a28 0%, #2e5a0a 22%, #152e04 50%, #080f02 100%)',
+      position:'relative', overflow:'hidden',
+      display:'flex', flexDirection:'column',
     }}>
+      {/* Atmosphere */}
+      <div style={{position:'absolute',inset:0,pointerEvents:'none',background:'radial-gradient(ellipse at 50% 20%,rgba(180,255,100,0.1) 0%,transparent 52%)'}}/>
+      <div style={{position:'absolute',bottom:0,left:0,right:0,height:'220px',pointerEvents:'none',background:'linear-gradient(to top,rgba(60,140,20,0.08) 0%,transparent 100%)'}}/>
+      <div style={{position:'absolute',inset:0,pointerEvents:'none',background:'radial-gradient(ellipse at 50% 50%,transparent 28%,rgba(0,0,0,0.58) 100%)'}}/>
 
-      {/* Fog */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 22%, rgba(200,255,120,0.1) 0%, transparent 55%)' }}/>
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '200px', pointerEvents: 'none', background: 'linear-gradient(to top, rgba(80,160,30,0.07) 0%, transparent 100%)' }}/>
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(0,0,0,0.52) 100%)' }}/>
+      {/* Animated dotted texture overlay */}
+      <div style={{
+        position:'absolute',inset:0,pointerEvents:'none',opacity:0.04,
+        backgroundImage:'radial-gradient(circle,#fff 1px,transparent 1px)',
+        backgroundSize:'28px 28px',
+      }}/>
 
-      {/* Green edge borders */}
-      <div style={{ position:'absolute', left:0, top:0, bottom:0, width:'7px', pointerEvents:'none', background:'linear-gradient(to bottom,transparent 5%,#4ade80 30%,#22c55e 50%,#4ade80 70%,transparent 95%)', boxShadow:'0 0 22px rgba(74,222,128,0.45)' }}/>
-      <div style={{ position:'absolute', right:0, top:0, bottom:0, width:'7px', pointerEvents:'none', background:'linear-gradient(to bottom,transparent 5%,#4ade80 30%,#22c55e 50%,#4ade80 70%,transparent 95%)', boxShadow:'0 0 22px rgba(74,222,128,0.45)' }}/>
-      <div style={{ position:'absolute', top:0, left:0, right:0, height:'5px', pointerEvents:'none', background:'linear-gradient(to right,transparent,#4ade80,#22c55e,#4ade80,transparent)', boxShadow:'0 0 18px rgba(74,222,128,0.45)' }}/>
-      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'5px', pointerEvents:'none', background:'linear-gradient(to right,transparent,#4ade80,#22c55e,#4ade80,transparent)', boxShadow:'0 0 18px rgba(74,222,128,0.45)' }}/>
+      {/* Green glowing edge borders */}
+      <div style={{position:'absolute',left:0,top:0,bottom:0,width:'8px',pointerEvents:'none',background:'linear-gradient(to bottom,transparent,#4ade80 25%,#16a34a 50%,#4ade80 75%,transparent)',boxShadow:'0 0 28px rgba(74,222,128,0.55)',zIndex:10}}/>
+      <div style={{position:'absolute',right:0,top:0,bottom:0,width:'8px',pointerEvents:'none',background:'linear-gradient(to bottom,transparent,#4ade80 25%,#16a34a 50%,#4ade80 75%,transparent)',boxShadow:'0 0 28px rgba(74,222,128,0.55)',zIndex:10}}/>
+      <div style={{position:'absolute',top:0,left:0,right:0,height:'6px',pointerEvents:'none',background:'linear-gradient(to right,transparent,#4ade80,#16a34a,#4ade80,transparent)',boxShadow:'0 0 22px rgba(74,222,128,0.55)',zIndex:10}}/>
+      <div style={{position:'absolute',bottom:0,left:0,right:0,height:'6px',pointerEvents:'none',background:'linear-gradient(to right,transparent,#4ade80,#16a34a,#4ade80,transparent)',boxShadow:'0 0 22px rgba(74,222,128,0.55)',zIndex:10}}/>
 
-      {/* TITLE — constrained width so it never clips */}
-      <div style={{ textAlign:'center', paddingTop:'22px', position:'relative', zIndex:2 }}>
-        <div style={{ maxWidth:'900px', margin:'0 auto', padding:'0 40px' }}>
-          <FallGuysText text="PICKLEBALL" fontSize={62} color="#d4f54e" strokeColor="#1a3000" strokeWidth={10} width={820}/>
+      {/* Corner accent dots */}
+      {[[0,0],[0,'auto'],['auto',0],['auto','auto']].map(([t,b],i)=>(
+        <div key={i} style={{
+          position:'absolute',
+          top:t===0?'6px':undefined, bottom:b==='auto'?undefined:b===0?'6px':undefined,
+          left:i<2?'6px':undefined, right:i>=2?'6px':undefined,
+          width:'14px',height:'14px',borderRadius:'50%',
+          background:'#4ade80',boxShadow:'0 0 12px #4ade80',
+          zIndex:11, pointerEvents:'none',
+          display: (t===0||t==='auto') ? 'block' : 'none',
+        }}/>
+      ))}
+
+      {/* TITLE */}
+      <div style={{textAlign:'center',paddingTop:'18px',position:'relative',zIndex:2}}>
+        <div style={{maxWidth:'860px',margin:'0 auto',padding:'0 60px'}}>
+          <FGText text="PICKLEBALL" size={64} fill="#d4f54e" stroke="#0d2200" sw={11} vw={840}/>
         </div>
-        <div style={{ maxWidth:'640px', margin:'-12px auto 0', padding:'0 40px' }}>
-          <FallGuysText text="SIMULATOR" fontSize={40} color="#a3e635" strokeColor="#1a3000" strokeWidth={8} width={580}/>
+        <div style={{maxWidth:'560px',margin:'-14px auto 0',padding:'0 60px'}}>
+          <FGText text="SIMULATOR" size={40} fill="#86efac" stroke="#0d2200" sw={8} vw={540}/>
         </div>
-        <p style={{ color:'rgba(150,220,80,0.45)', fontSize:'10px', fontFamily:'monospace', letterSpacing:'6px', textTransform:'uppercase', marginTop:'4px' }}>
+        <p style={{color:'rgba(140,220,70,0.4)',fontSize:'10px',fontFamily:'monospace',letterSpacing:'7px',textTransform:'uppercase',marginTop:'2px'}}>
           3D · Real Physics · Analytics
         </p>
       </div>
 
-      {/* Main 3-panel — centered, max 1080px */}
+      {/* 3-PANEL — full width, push stats far left, play far right */}
       <div style={{
-        flex: 1,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: '48px',
-        padding: '12px 80px 16px',
-        maxWidth: '1080px',
-        margin: '0 auto',
-        width: '100%',
-        position: 'relative', zIndex: 2,
+        flex:1, display:'flex', alignItems:'center',
+        justifyContent:'space-between',
+        padding:'10px 60px 16px',
+        position:'relative', zIndex:2,
+        maxWidth:'1400px', margin:'0 auto', width:'100%',
       }}>
 
-        {/* LEFT */}
-        <StatsPanel />
+        {/* FAR LEFT — Stats */}
+        <StatsPanel/>
 
-        {/* CENTER */}
-        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', flex:'0 0 260px' }}>
-          <PaddleHero />
-          <p style={{ color:'rgba(160,230,80,0.3)', fontSize:'9px', fontFamily:'monospace', letterSpacing:'4px', textTransform:'uppercase', marginTop:'6px' }}>
+        {/* CENTER — Paddle */}
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',flex:'0 0 280px'}}>
+          <PaddleHero/>
+          <p style={{color:'rgba(140,220,70,0.28)',fontSize:'9px',fontFamily:'monospace',letterSpacing:'4px',textTransform:'uppercase',marginTop:'4px'}}>
             Ready · Set · Play
           </p>
         </div>
 
-        {/* RIGHT */}
-        <div style={{ display:'flex', flexDirection:'column', gap:'10px', flex:'0 0 190px' }}>
-          {difficulties.map((d) => {
-            const isSel = selected === d.id;
-            const isHov = hovered === d.id;
-            return (
-              <button key={d.id}
-                onClick={() => setSelected(d.id)}
-                onMouseEnter={() => setHovered(d.id)}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  padding:'14px 18px', borderRadius:'14px',
-                  border:`2.5px solid ${isSel ? d.color : 'rgba(100,200,60,0.22)'}`,
-                  background: isSel
-                    ? `linear-gradient(135deg,${d.color}28,${d.color}0a)`
-                    : isHov ? 'rgba(80,160,30,0.12)' : 'rgba(10,25,5,0.6)',
-                  color: isSel ? d.color : 'rgba(180,230,100,0.5)',
-                  fontFamily:'"Arial Black",Arial,sans-serif',
-                  fontSize:'15px', fontWeight:'900',
-                  letterSpacing:'3px', cursor:'pointer',
-                  transition:'all 0.15s ease',
-                  boxShadow: isSel ? `0 0 20px ${d.glow},inset 0 1px 0 rgba(255,255,255,0.08)` : 'none',
-                  transform: isSel||isHov ? 'scale(1.04)' : 'scale(1)',
-                  backdropFilter:'blur(6px)', textAlign:'center',
-                  position:'relative', overflow:'hidden',
-                }}
-              >
-                {isSel && <div style={{ position:'absolute', left:0, top:0, bottom:0, width:'3px', background:d.color, boxShadow:`0 0 8px ${d.color}` }}/>}
-                {d.label}
-              </button>
-            );
-          })}
+        {/* FAR RIGHT — Difficulty + Play */}
+        <div style={{display:'flex',flexDirection:'column',gap:'10px',width:'210px',flexShrink:0}}>
+          {difficulties.map(d=>(
+            <FGButton key={d.id}
+              label={d.label} color={d.color} dark={d.dark} glow={d.glow}
+              selected={selected===d.id} hovered={hovered===d.id}
+              onClick={()=>setSelected(d.id)}
+              onMouseEnter={()=>setHovered(d.id)}
+              onMouseLeave={()=>setHovered(null)}
+            />
+          ))}
 
-          <div style={{ height:'1px', background:'rgba(100,200,60,0.15)', margin:'2px 0' }}/>
+          <div style={{height:'1px',background:'rgba(80,180,40,0.18)',margin:'3px 0'}}/>
 
-          {/* PLAY button */}
-          <button
-            onClick={() => onStartGame(selected)}
-            onMouseEnter={() => setHovered('play')}
-            onMouseLeave={() => setHovered(null)}
+          <FGButton label="PLAY!" color="#22c55e" dark="#0a4a18" glow="rgba(74,222,128,0.7)"
+            selected={false} hovered={hovered==='play'} big
+            onClick={()=>onStartGame(selected)}
+            onMouseEnter={()=>setHovered('play')}
+            onMouseLeave={()=>setHovered(null)}
+          />
+
+          <button onClick={onHistory}
+            onMouseEnter={()=>setHovered('hist')}
+            onMouseLeave={()=>setHovered(null)}
             style={{
-              borderRadius:'16px', border:'none', background:'none', cursor:'pointer',
-              transition:'all 0.15s ease',
-              transform: hovered==='play' ? 'scale(1.07) translateY(-2px)' : 'scale(1)',
-              filter: hovered==='play' ? 'brightness(1.15)' : 'brightness(1)',
-              padding: 0,
+              padding:'10px',borderRadius:'12px',
+              border:'1.5px solid rgba(80,180,40,0.2)',
+              background:'rgba(8,22,4,0.6)',
+              color:hovered==='hist'?'rgba(140,220,70,0.9)':'rgba(80,160,40,0.4)',
+              fontFamily:'monospace',fontSize:'10px',
+              letterSpacing:'2px',cursor:'pointer',
+              transition:'all 0.15s ease',textAlign:'center',
+              backdropFilter:'blur(4px)',
             }}
-          >
-            <div style={{
-              padding:'6px 18px 12px',
-              borderRadius:'16px',
-              background:'linear-gradient(180deg,#22c55e 0%,#16a34a 50%,#0f7a30 100%)',
-              border:'3px solid #0d2a0a',
-              boxShadow: hovered==='play'
-                ? '0 0 32px rgba(74,222,128,0.6),0 6px 0 #083a10,0 8px 20px rgba(0,0,0,0.4)'
-                : '0 5px 0 #083a10,0 7px 18px rgba(0,0,0,0.35)',
-            }}>
-              <FallGuysText text="PLAY!" fontSize={32} color="#d4f54e" strokeColor="#0d2a0a" strokeWidth={8} width={190}/>
-            </div>
-          </button>
-
-          <button
-            onClick={onHistory}
-            onMouseEnter={() => setHovered('hist')}
-            onMouseLeave={() => setHovered(null)}
-            style={{
-              padding:'10px', borderRadius:'10px',
-              border:'1px solid rgba(100,200,60,0.18)',
-              background:'rgba(10,25,5,0.5)',
-              color: hovered==='hist' ? 'rgba(150,220,80,0.9)' : 'rgba(100,180,60,0.4)',
-              fontFamily:'monospace', fontSize:'10px',
-              letterSpacing:'2px', cursor:'pointer',
-              transition:'all 0.15s ease', textAlign:'center',
-            }}
-          >
-            MATCH HISTORY
-          </button>
+          >MATCH HISTORY</button>
         </div>
       </div>
 
-      {/* Controls hint */}
-      <div style={{ textAlign:'center', paddingBottom:'12px', position:'relative', zIndex:2 }}>
-        <p style={{ color:'rgba(120,200,60,0.28)', fontSize:'9px', fontFamily:'monospace', letterSpacing:'3px', textTransform:'uppercase' }}>
+      {/* Bottom controls */}
+      <div style={{textAlign:'center',paddingBottom:'14px',position:'relative',zIndex:2}}>
+        <p style={{color:'rgba(100,180,40,0.25)',fontSize:'9px',fontFamily:'monospace',letterSpacing:'3px',textTransform:'uppercase'}}>
           Arrows Move · Space Serve · Shift Drive · Ctrl Dink · Q Lob · A/D Aim
         </p>
       </div>
