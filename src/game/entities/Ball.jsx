@@ -10,46 +10,34 @@ const GRAVITY     = -18;
 const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
   const meshRef   = useRef();
   const shadowRef = useRef();
-
-  const vel         = useRef(new THREE.Vector3());
-  const active      = useRef(false);
-  const lastStriker = useRef('NONE');
-
+  const vel               = useRef(new THREE.Vector3());
+  const active            = useRef(false);
+  const lastStriker       = useRef('NONE');
   const playerSideBounces = useRef(0);
   const aiSideBounces     = useRef(0);
   const currentSide       = useRef(null);
-  const prevY = useRef(1);
-  const prevZ = useRef(0);
+  const prevY             = useRef(1);
+  const prevZ             = useRef(0);
 
   useImperativeHandle(ref, () => ({
     launch(pos, velocity, striker = 'PLAYER') {
       if (!meshRef.current) return;
       meshRef.current.position.set(pos.x, pos.y, pos.z);
       vel.current.set(velocity.x, velocity.y, velocity.z);
-      prevY.current = pos.y;
-      prevZ.current = pos.z;
+      prevY.current             = pos.y;
+      prevZ.current             = pos.z;
       playerSideBounces.current = 0;
       aiSideBounces.current     = 0;
       currentSide.current       = pos.z > 0 ? 'player' : 'ai';
       lastStriker.current       = striker;
       active.current            = true;
     },
-
-    stop() {
-      active.current = false;
-      vel.current.set(0, 0, 0);
-    },
-
-    hit(v, striker = 'PLAYER') {
-      vel.current.set(v.x, v.y, v.z);
-      lastStriker.current = striker;
-    },
-
+    stop() { active.current = false; vel.current.set(0, 0, 0); },
+    hit(v, striker = 'PLAYER') { vel.current.set(v.x, v.y, v.z); lastStriker.current = striker; },
     getPosition()    { return meshRef.current?.position.clone() ?? new THREE.Vector3(); },
     getVelocity()    { return vel.current.clone(); },
     getLastStriker() { return lastStriker.current; },
     isActive()       { return active.current; },
-
     getBounceCount() {
       const pos = meshRef.current?.position;
       if (!pos) return 0;
@@ -63,7 +51,8 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
     const pos = meshRef.current.position;
     const v   = vel.current;
 
-    v.y += GRAVITY * dt;
+    // Physics
+    v.y   += GRAVITY * dt;
     pos.x += v.x * dt;
     pos.y += v.y * dt;
     pos.z += v.z * dt;
@@ -76,7 +65,7 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       shadowRef.current.scale.set(s, s, s);
     }
 
-    // Side crossing — reset that side's bounce count
+    // Track which side ball is on — reset that side's bounce count when it arrives
     const nowSide = pos.z > 0 ? 'player' : 'ai';
     if (nowSide !== currentSide.current) {
       if (nowSide === 'player') playerSideBounces.current = 0;
@@ -89,6 +78,7 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
     const crossedFromAI     = prevZ.current < -0.12 && pos.z >= -0.12;
     if ((crossedFromPlayer || crossedFromAI) && pos.y < NET_H + BALL_RADIUS) {
       active.current = false;
+      // Whoever hit it last caused the net fault
       if (onFault) onFault({ reason: 'NET_HIT', striker: lastStriker.current, position: pos.clone() });
       prevY.current = pos.y;
       prevZ.current = pos.z;
@@ -103,28 +93,25 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       v.z  *= 0.88;
       if (Math.abs(v.y) < 0.4) v.y = 0;
 
-      const halfW = COURT_W / 2;
-      const halfL = COURT_L / 2;
-
       // ── OUT OF BOUNDS on bounce ──
-      // Key fix: use WHICH SIDE the ball is on to decide who gets the point,
-      // NOT who hit it last. If ball bounces out on AI side → player scores.
-      // If ball bounces out on player side → AI scores.
-      if (Math.abs(pos.x) > halfW + 0.15 || Math.abs(pos.z) > halfL + 0.15) {
+      // Score based on WHERE the ball went out, not who hit it
+      // Ball out on AI side (z < 0)  → player scores
+      // Ball out on player side (z > 0) → AI scores
+      if (Math.abs(pos.x) > COURT_W / 2 + 0.15 || Math.abs(pos.z) > COURT_L / 2 + 0.15) {
         active.current = false;
-        const outSide = pos.z > 0 ? 'player' : 'ai';
-        if (outSide === 'ai') {
-          // Ball went out on AI side — player scores
-          if (onScore) onScore({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+        if (pos.z <= 0) {
+          // Out on AI side — PLAYER scores
+          onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
         } else {
-          // Ball went out on player side — AI scores
-          if (onScore) onScore({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
+          // Out on player side — AI scores
+          onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
         }
         prevY.current = pos.y;
         prevZ.current = pos.z;
         return;
       }
 
+      // Valid bounce — track per side
       const side = pos.z > 0 ? 'player' : 'ai';
       if (side === 'player') playerSideBounces.current += 1;
       else                   aiSideBounces.current     += 1;
@@ -135,7 +122,7 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
 
       if (onBounce) onBounce({ position: pos.clone(), side, sideBounces });
 
-      // ── DOUBLE BOUNCE ──
+      // ── DOUBLE BOUNCE — that side loses ──
       if (sideBounces >= 2) {
         active.current = false;
         if (side === 'player') onScore?.({ scorer: 'ai',    reason: 'DOUBLE_BOUNCE' });
@@ -146,7 +133,7 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       }
     }
 
-    // ── MISSED PAST BASELINE (never bounced, flew over) ──
+    // ── MISSED COMPLETELY — flew past baseline without bouncing ──
     if (pos.z >  COURT_L / 2 + 3) { active.current = false; onScore?.({ scorer: 'ai',    reason: 'MISSED_SHOT' }); }
     if (pos.z < -(COURT_L / 2 + 3)) { active.current = false; onScore?.({ scorer: 'player', reason: 'MISSED_SHOT' }); }
 
