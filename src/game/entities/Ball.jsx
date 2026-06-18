@@ -87,19 +87,44 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
     }
 
     // ── MID-AIR OUT OF BOUNDS (sideways, never touched ground) ──
-    // Whoever hit it last is responsible — use lastStriker
+    // The hitter is responsible — if YOU hit it out, AI scores. If AI hit it out, you score.
+    // But also check Z direction: if ball is flying toward AI side and goes out sideways,
+    // the person who hit it TOWARD that side is responsible.
     if (pos.y > FLOOR_Y && Math.abs(pos.x) > COURT_W / 2 + 0.2) {
       active.current = false;
       if (lastStriker.current === 'PLAYER') {
-        // Player hit it out sideways — AI scores
+        // Player hit it — if it went out on AI side, AI scores (player hit out)
+        // If it went out on player side, AI scores (player hit it badly)
         onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
       } else {
-        // AI hit it out sideways — player scores
+        // AI hit it — player scores
         onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
       }
       prevY.current = pos.y;
       prevZ.current = pos.z;
       return;
+    }
+
+    // ── DIRECT OUT past baseline mid-air (no bounce, flew past end line) ──
+    // Ball flying toward AI side goes past their baseline = player hit it long = AI scores
+    // Ball flying toward player side goes past player baseline = AI hit it long = player scores
+    if (pos.y > FLOOR_Y) {
+      if (pos.z < -(COURT_L / 2 + 1)) {
+        // Past AI baseline mid-air — player hit it too long
+        active.current = false;
+        onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
+        prevY.current = pos.y;
+        prevZ.current = pos.z;
+        return;
+      }
+      if (pos.z > COURT_L / 2 + 1) {
+        // Past player baseline mid-air — AI hit it too long
+        active.current = false;
+        onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+        prevY.current = pos.y;
+        prevZ.current = pos.z;
+        return;
+      }
     }
 
     // ── FLOOR BOUNCE ──
@@ -148,9 +173,9 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       }
     }
 
-    // ── MISSED COMPLETELY — flew past baseline without bouncing ──
-    if (pos.z >  COURT_L / 2 + 3) { active.current = false; onScore?.({ scorer: 'ai',    reason: 'MISSED_SHOT' }); }
-    if (pos.z < -(COURT_L / 2 + 3)) { active.current = false; onScore?.({ scorer: 'player', reason: 'MISSED_SHOT' }); }
+    // ── SAFETY NET — ball went extremely far past baseline ──
+    if (pos.z >  COURT_L / 2 + 4) { active.current = false; onScore?.({ scorer: 'ai',    reason: 'MISSED_SHOT' }); }
+    if (pos.z < -(COURT_L / 2 + 4)) { active.current = false; onScore?.({ scorer: 'player', reason: 'MISSED_SHOT' }); }
 
     prevY.current = pos.y;
     prevZ.current = pos.z;
