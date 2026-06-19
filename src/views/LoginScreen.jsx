@@ -1,184 +1,240 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+
+const BG_SRC = "/backgroundpick.png";
+
+const C = {
+  bg:    '#07090C',
+  panel: '#11161A',
+  border:'rgba(255,255,255,0.06)',
+  lime:  '#B6FF2E',
+  lime2: '#93E52D',
+  white: '#FFFFFF',
+  muted: '#9EA7AE',
+};
+
+// SVG pickleball icon — perforated ball
+function PickleballIcon({ size = 64 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Outer glow */}
+      <circle cx="32" cy="32" r="30" fill={`${C.lime}18`}/>
+      {/* Ball body */}
+      <circle cx="32" cy="32" r="28" fill="url(#ballGrad)"/>
+      {/* Surface shading */}
+      <circle cx="32" cy="32" r="28" fill="url(#ballShade)"/>
+      {/* Highlight */}
+      <ellipse cx="24" cy="22" rx="8" ry="5" fill="rgba(255,255,255,0.18)" transform="rotate(-20 24 22)"/>
+      {/* Perforations — arranged in typical pickleball pattern */}
+      {[
+        [20,18],[32,14],[44,18],
+        [14,28],[26,24],[38,24],[50,28],
+        [20,36],[32,32],[44,36],
+        [14,44],[26,40],[38,40],[50,44],
+        [20,50],[32,46],[44,50],
+      ].map(([cx,cy],i) => (
+        <circle key={i} cx={cx} cy={cy} r="3.2" fill="rgba(0,0,0,0.35)"/>
+      ))}
+      {/* Rim */}
+      <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5"/>
+      <defs>
+        <radialGradient id="ballGrad" cx="38%" cy="32%" r="65%">
+          <stop offset="0%" stopColor="#d4f54e"/>
+          <stop offset="55%" stopColor="#B6FF2E"/>
+          <stop offset="100%" stopColor="#7ccc1a"/>
+        </radialGradient>
+        <radialGradient id="ballShade" cx="60%" cy="70%" r="60%">
+          <stop offset="0%" stopColor="rgba(0,0,0,0.18)"/>
+          <stop offset="100%" stopColor="transparent"/>
+        </radialGradient>
+      </defs>
+    </svg>
+  );
+}
 
 export default function LoginScreen({ onLogin }) {
   const [username, setUsername] = useState('');
-  const [error, setError]       = useState('');
-  const [hovered, setHovered]   = useState(false);
+  const [error,    setError]    = useState('');
+  const [focused,  setFocused]  = useState(false);
+  const [hov,      setHov]      = useState(false);
+  const inputRef = useRef(null);
 
-  // Auto-fill if returning user
   useEffect(() => {
     const saved = localStorage.getItem('pkl_username');
     if (saved) setUsername(saved);
+    // Focus input after mount
+    setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
 
   const handleSubmit = () => {
     const clean = username.trim();
-    if (!clean) { setError('Please enter a username'); return; }
+    if (!clean)           { setError('Please enter a username'); return; }
     if (clean.length < 2) { setError('At least 2 characters'); return; }
-    if (clean.length > 20) { setError('Max 20 characters'); return; }
+    if (clean.length > 20){ setError('Max 20 characters'); return; }
     if (!/^[a-zA-Z0-9_]+$/.test(clean)) { setError('Letters, numbers and _ only'); return; }
     localStorage.setItem('pkl_username', clean);
     onLogin(clean);
   };
 
-  const handleKey = (e) => {
-    if (e.key === 'Enter') handleSubmit();
-  };
-
   return (
     <div style={{
-      width: '100vw', minHeight: '100vh',
-      background: 'radial-gradient(ellipse at 50% 40%, #5a8a28 0%, #2e5a0a 22%, #152e04 50%, #080f02 100%)',
+      width: '100vw', height: '100vh',
       position: 'relative', overflow: 'hidden',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: 'Inter, sans-serif',
     }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 30px rgba(182,255,46,0.2); } 50% { box-shadow: 0 0 50px rgba(182,255,46,0.35); } }
+        @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }
+      `}</style>
 
-      {/* Atmosphere */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 20%, rgba(180,255,100,0.1) 0%, transparent 52%)' }} />
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 50%, transparent 28%, rgba(0,0,0,0.58) 100%)' }} />
+      {/* Background image */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 0,
+        backgroundImage: `url(${BG_SRC})`,
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        filter: 'brightness(0.28) blur(2px)',
+      }}/>
 
-      {/* Green edge borders */}
-      {['left','right'].map(side => (
-        <div key={side} style={{
-          position: 'absolute', [side]: 0, top: 0, bottom: 0, width: '8px',
-          background: 'linear-gradient(to bottom, transparent, #4ade80 25%, #16a34a 50%, #4ade80 75%, transparent)',
-          boxShadow: '0 0 28px rgba(74,222,128,0.55)', zIndex: 10, pointerEvents: 'none',
-        }} />
-      ))}
-      {['top','bottom'].map(side => (
-        <div key={side} style={{
-          position: 'absolute', [side]: 0, left: 0, right: 0, height: '6px',
-          background: 'linear-gradient(to right, transparent, #4ade80, #16a34a, #4ade80, transparent)',
-          boxShadow: '0 0 22px rgba(74,222,128,0.55)', zIndex: 10, pointerEvents: 'none',
-        }} />
-      ))}
+      {/* Dark overlay */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 1,
+        background: 'radial-gradient(ellipse at center, rgba(7,9,12,0.5) 0%, rgba(7,9,12,0.88) 100%)',
+      }}/>
+
+      {/* Lime radial glow behind card */}
+      <div style={{
+        position: 'absolute', zIndex: 1,
+        width: '500px', height: '500px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(182,255,46,0.08) 0%, transparent 70%)',
+        filter: 'blur(40px)',
+      }}/>
 
       {/* Card */}
       <div style={{
-        background: 'rgba(8,22,4,0.85)',
-        border: '2px solid rgba(74,222,128,0.3)',
-        borderRadius: '24px',
-        padding: '48px 52px',
-        boxShadow: '0 8px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(120,220,60,0.08)',
-        backdropFilter: 'blur(16px)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px',
-        minWidth: '380px',
         position: 'relative', zIndex: 2,
+        width: '360px',
+        background: 'rgba(17,22,26,0.85)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderRadius: '24px',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04)',
+        padding: '40px 36px 36px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0',
+        animation: 'fadeUp 0.5s ease both',
       }}>
 
-        {/* Ball icon */}
-        <div style={{
-          width: '72px', height: '72px', borderRadius: '50%',
-          background: 'radial-gradient(circle at 35% 35%, #e8f840, #b8c820)',
-          boxShadow: '0 4px 20px rgba(180,200,0,0.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '32px',
-        }}>
-          🏓
+        {/* Ball icon — floating */}
+        <div style={{ animation: 'float 3s ease-in-out infinite', marginBottom: '20px' }}>
+          <div style={{ filter: 'drop-shadow(0 8px 24px rgba(182,255,46,0.4))' }}>
+            <PickleballIcon size={72}/>
+          </div>
         </div>
 
         {/* Title */}
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <h1 style={{
-            fontFamily: '"Arial Black", Impact, sans-serif',
-            fontSize: '28px', fontWeight: '900',
-            color: '#d4f54e',
-            textShadow: '0 0 20px rgba(180,220,40,0.4), 2px 3px 0 #0d2200',
-            WebkitTextStroke: '1px #0d2200',
-            margin: 0, letterSpacing: '3px',
-          }}>
-            PICKLEBALL
-          </h1>
-          <p style={{
-            color: 'rgba(140,220,70,0.6)', fontSize: '11px',
-            fontFamily: 'monospace', letterSpacing: '5px',
-            textTransform: 'uppercase', marginTop: '4px',
-          }}>
-            Simulator
-          </p>
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: '32px', letterSpacing: '4px',
+            color: C.white, lineHeight: 1,
+            textShadow: '0 0 30px rgba(182,255,46,0.15)',
+          }}>PICKLEBALL</h1>
+          {/* Decorative line + SIMULATOR */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', marginTop: '4px' }}>
+            <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to right, transparent, rgba(182,255,46,0.4))' }}/>
+            <span style={{
+              fontFamily: "'Bebas Neue', sans-serif",
+              fontSize: '13px', letterSpacing: '6px',
+              color: C.lime,
+            }}>SIMULATOR</span>
+            <div style={{ flex: 1, height: '1px', background: 'linear-gradient(to left, transparent, rgba(182,255,46,0.4))' }}/>
+          </div>
         </div>
 
-        {/* Username input */}
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* Input section */}
+        <div style={{ width: '100%', marginBottom: '20px' }}>
           <label style={{
-            color: 'rgba(140,210,70,0.7)', fontSize: '10px',
-            fontFamily: 'monospace', letterSpacing: '3px',
-            textTransform: 'uppercase',
+            display: 'block',
+            color: C.muted, fontSize: '11px', fontWeight: 600,
+            letterSpacing: '0.18em', textTransform: 'uppercase',
+            marginBottom: '8px', fontFamily: 'Inter,sans-serif',
+          }}>Enter Username</label>
+
+          <div style={{
+            position: 'relative',
+            border: `1.5px solid ${focused ? C.lime : error ? 'rgba(255,107,74,0.5)' : 'rgba(255,255,255,0.1)'}`,
+            borderRadius: '12px',
+            background: 'rgba(255,255,255,0.04)',
+            transition: 'all 0.2s ease',
+            boxShadow: focused ? `0 0 0 3px rgba(182,255,46,0.1)` : 'none',
           }}>
-            Enter Username
-          </label>
-          <input
-            type="text"
-            value={username}
-            onChange={e => { setUsername(e.target.value); setError(''); }}
-            onKeyDown={handleKey}
-            placeholder="e.g. PicklePro99"
-            maxLength={20}
-            autoFocus
-            style={{
-              width: '100%',
-              padding: '14px 18px',
-              borderRadius: '12px',
-              border: `2px solid ${error ? 'rgba(248,113,113,0.6)' : 'rgba(74,222,128,0.3)'}`,
-              background: 'rgba(15,35,8,0.8)',
-              color: '#d4f54e',
-              fontFamily: '"Arial Black", monospace',
-              fontSize: '16px',
-              fontWeight: '700',
-              letterSpacing: '2px',
-              outline: 'none',
-              boxSizing: 'border-box',
-              transition: 'border-color 0.2s',
-            }}
-            onFocus={e => e.target.style.borderColor = 'rgba(74,222,128,0.7)'}
-            onBlur={e => e.target.style.borderColor = error ? 'rgba(248,113,113,0.6)' : 'rgba(74,222,128,0.3)'}
-          />
-          {error && (
-            <p style={{ color: '#f87171', fontSize: '11px', fontFamily: 'monospace', margin: 0 }}>
-              ⚠ {error}
-            </p>
+            {/* User icon */}
+            <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={focused ? C.lime : C.muted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/>
+              </svg>
+            </div>
+            <input
+              ref={inputRef}
+              type="text"
+              value={username}
+              placeholder="e.g. PicklePro99"
+              maxLength={20}
+              onChange={e => { setUsername(e.target.value); setError(''); }}
+              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              style={{
+                width: '100%', padding: '13px 14px 13px 40px',
+                background: 'transparent', border: 'none', outline: 'none',
+                color: C.white, fontSize: '14px', fontWeight: 500,
+                fontFamily: 'Inter,sans-serif',
+              }}
+            />
+          </div>
+
+          {error ? (
+            <div style={{ color: '#FF6B4A', fontSize: '11px', fontFamily: 'Inter,sans-serif', marginTop: '6px' }}>⚠ {error}</div>
+          ) : (
+            <div style={{ color: 'rgba(255,255,255,0.22)', fontSize: '11px', fontFamily: 'Inter,sans-serif', marginTop: '6px' }}>
+              Letters, numbers and _ only · Min 2 characters
+            </div>
           )}
-          <p style={{ color: 'rgba(100,160,60,0.4)', fontSize: '10px', fontFamily: 'monospace', margin: 0 }}>
-            Letters, numbers and _ only · Max 20 chars
-          </p>
         </div>
 
         {/* Play button */}
         <button
           onClick={handleSubmit}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
+          onMouseEnter={() => setHov(true)}
+          onMouseLeave={() => setHov(false)}
           style={{
-            width: '100%', padding: '16px',
-            borderRadius: '16px',
-            border: '3px solid #0d2a0a',
-            background: hovered
-              ? 'linear-gradient(180deg, #22c55e 0%, #16a34a 100%)'
-              : 'linear-gradient(180deg, #16a34a 0%, #0f7a30 100%)',
-            color: '#d4f54e',
-            fontFamily: '"Arial Black", Impact, sans-serif',
-            fontSize: '20px', fontWeight: '900',
-            letterSpacing: '4px', cursor: 'pointer',
-            transition: 'all 0.15s ease',
-            boxShadow: hovered
-              ? '0 0 28px rgba(74,222,128,0.55), 0 5px 0 #083a10'
-              : '0 5px 0 #083a10, 0 7px 16px rgba(0,0,0,0.4)',
-            transform: hovered ? 'scale(1.03) translateY(-2px)' : 'scale(1)',
-            WebkitTextStroke: '1px #0d2a0a',
-            textShadow: '0 2px 4px rgba(0,0,0,0.4)',
+            width: '100%', height: '52px',
+            borderRadius: '14px', border: 'none',
+            background: 'linear-gradient(135deg, #C7FF34, #A9E928)',
+            color: '#07090C', fontFamily: "'Bebas Neue',sans-serif",
+            fontSize: '20px', letterSpacing: '4px',
+            cursor: 'pointer', transition: 'all 0.15s ease',
+            boxShadow: hov
+              ? '0 0 40px rgba(182,255,46,0.55), 0 6px 20px rgba(0,0,0,0.3)'
+              : '0 0 24px rgba(182,255,46,0.25), 0 4px 14px rgba(0,0,0,0.2)',
+            transform: hov ? 'scale(1.02) translateY(-1px)' : 'scale(1)',
+            animation: 'pulse 3s ease infinite',
           }}
-        >
-          LET'S PLAY!
-        </button>
+        >LET'S PLAY!</button>
 
-        <p style={{
-          color: 'rgba(80,140,40,0.35)', fontSize: '10px',
-          fontFamily: 'monospace', letterSpacing: '2px',
-          textAlign: 'center', margin: 0,
-        }}>
-          Your username saves your match history
-        </p>
+        {/* Footer text */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginTop: '20px' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+            <path d="M18 20V10M12 20V4M6 20v-6"/>
+          </svg>
+          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '11px', fontFamily: 'Inter,sans-serif', letterSpacing: '0.05em', textAlign: 'center' }}>
+            Your progress. Every match. Every time.
+          </p>
+        </div>
       </div>
     </div>
   );
