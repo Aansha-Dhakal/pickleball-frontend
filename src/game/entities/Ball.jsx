@@ -18,12 +18,8 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
   const currentSide       = useRef(null);
   const prevY             = useRef(1);
   const prevZ             = useRef(0);
-
-  // Track whether ball has bounced on the RECEIVING side since last hit
-  // This is the key: if ball bounced on AI side, player hit a good shot
-  // If it then goes out, player still scores (it was in)
-  const bouncedOnReceivingSide = useRef(false);
-  const receivingSide          = useRef(null); // 'player' or 'ai'
+  // Track the side of the FIRST bounce after each hit
+  const firstBounceSide   = useRef(null);
 
   useImperativeHandle(ref, () => ({
     launch(pos, velocity, striker = 'PLAYER') {
@@ -36,16 +32,14 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       aiSideBounces.current     = 0;
       currentSide.current       = pos.z > 0 ? 'player' : 'ai';
       lastStriker.current       = striker;
-      bouncedOnReceivingSide.current = false;
-      receivingSide.current     = striker === 'PLAYER' ? 'ai' : 'player';
+      firstBounceSide.current   = null;
       active.current            = true;
     },
     stop() { active.current = false; vel.current.set(0, 0, 0); },
     hit(v, striker = 'PLAYER') {
       vel.current.set(v.x, v.y, v.z);
-      lastStriker.current = striker;
-      bouncedOnReceivingSide.current = false;
-      receivingSide.current = striker === 'PLAYER' ? 'ai' : 'player';
+      lastStriker.current     = striker;
+      firstBounceSide.current = null; // reset on each new hit
     },
     getPosition()    { return meshRef.current?.position.clone() ?? new THREE.Vector3(); },
     getVelocity()    { return vel.current.clone(); },
@@ -77,7 +71,7 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       shadowRef.current.scale.set(s, s, s);
     }
 
-    // Track side crossing — reset bounce count for new side
+    // Track side crossing
     const nowSide = pos.z > 0 ? 'player' : 'ai';
     if (nowSide !== currentSide.current) {
       if (nowSide === 'player') playerSideBounces.current = 0;
@@ -105,49 +99,47 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
 
       const halfW = COURT_W / 2;
       const halfL = COURT_L / 2;
+      const bounceSide = pos.z <= 0 ? 'ai' : 'player';
+
+      // Record first bounce side after each hit
+      if (firstBounceSide.current === null) {
+        firstBounceSide.current = bounceSide;
+      }
 
       // ── OUT OF BOUNDS ON BOUNCE ──
       if (Math.abs(pos.x) > halfW + 0.15 || Math.abs(pos.z) > halfL + 0.15) {
         active.current = false;
 
-        // KEY RULE:
-        // If ball already bounced on receiving side → hitter scored a winner that went long/wide
-        //   → The RECEIVER loses (they should have let it go)
-        //   → Wait — in pickleball, if ball lands OUT, the hitter loses the point
-        //   → If ball lands IN then goes out after bounce, it's already scored
-        //
-        // SIMPLEST CORRECT RULE:
-        // Whoever hit the ball last is responsible for where it lands.
-        // If PLAYER hit it and it lands out → AI scores
-        // If AI hit it and it lands out → PLAYER scores
-        // This is correct for ALL cases:
-        //   - You hit wide on AI side → AI scores ✅
-        //   - AI hit wide on your side → You score ✅  
-        //   - You hit long past AI baseline → AI scores ✅
-        //   - AI hit long past your baseline → You score ✅
-
-        if (lastStriker.current === 'PLAYER') {
+        // Use firstBounceSide — where did the ball FIRST land after the last hit?
+        // If it first bounced on AI side → ball landed in AI court → player wins rally
+        // If it first bounced on player side → ball landed in player court → AI wins rally
+        // If it never bounced (firstBounceSide still null) → use lastStriker (hitter responsible)
+        if (firstBounceSide.current === 'ai') {
+          // Ball landed on AI side first — player wins
+          onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+        } else if (firstBounceSide.current === 'player') {
+          // Ball landed on player side first — AI wins
           onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
         } else {
-          onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+          // No bounce yet — hitter sent it directly out
+          if (lastStriker.current === 'PLAYER') {
+            onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
+          } else {
+            onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+          }
         }
         prevY.current = pos.y; prevZ.current = pos.z;
         return;
       }
 
       // Valid in-bounds bounce
-      const side = pos.z > 0 ? 'player' : 'ai';
+      const side = bounceSide;
       if (side === 'player') playerSideBounces.current += 1;
       else                   aiSideBounces.current     += 1;
 
       const sideBounces = side === 'player'
         ? playerSideBounces.current
         : aiSideBounces.current;
-
-      // Mark that ball bounced on receiving side
-      if (side === receivingSide.current) {
-        bouncedOnReceivingSide.current = true;
-      }
 
       if (onBounce) onBounce({ position: pos.clone(), side, sideBounces });
 
@@ -161,41 +153,37 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       }
     }
 
-    // ── MID-AIR OUT — past baseline without bouncing ──
-    // Ball flying toward AI past their baseline = player hit it too long = AI scores
-    // Ball flying toward player past their baseline = AI hit it too long = player scores
+    // ── MID-AIR OUT — never touched ground ──
     if (pos.y > FLOOR_Y) {
+      // Past AI baseline mid-air
       if (pos.z < -(COURT_L / 2 + 2)) {
         active.current = false;
-        // Flying past AI baseline — who sent it there?
-        if (lastStriker.current === 'PLAYER') {
-          // Player hit it too long — AI scores
-          onScore?.({ scorer: 'ai', reason: 'MISSED_SHOT' });
-        } else {
-          // AI returned it past their own baseline somehow, player scores
+        if (firstBounceSide.current === 'ai') {
+          // Already bounced on AI side — player scores (AI let it go out)
           onScore?.({ scorer: 'player', reason: 'MISSED_SHOT' });
+        } else {
+          // Never bounced — player hit it too long past AI baseline — AI scores
+          onScore?.({ scorer: 'ai', reason: 'MISSED_SHOT' });
         }
         prevY.current = pos.y; prevZ.current = pos.z;
         return;
       }
+      // Past player baseline mid-air
       if (pos.z > COURT_L / 2 + 2) {
         active.current = false;
-        // Flying past player baseline — who sent it there?
-        if (lastStriker.current === 'AI') {
-          // AI hit it too long — player scores
-          onScore?.({ scorer: 'player', reason: 'MISSED_SHOT' });
-        } else {
-          // Player returned it past their own baseline, AI scores
+        if (firstBounceSide.current === 'player') {
+          // Already bounced on player side — AI scores (player let it go out)
           onScore?.({ scorer: 'ai', reason: 'MISSED_SHOT' });
+        } else {
+          // Never bounced — AI hit it too long — player scores
+          onScore?.({ scorer: 'player', reason: 'MISSED_SHOT' });
         }
         prevY.current = pos.y; prevZ.current = pos.z;
         return;
       }
-
-      // ── MID-AIR SIDEWAYS OUT ──
+      // Sideways out mid-air — hitter is always responsible
       if (Math.abs(pos.x) > COURT_W / 2 + 0.3) {
         active.current = false;
-        // Whoever hit it last sent it wide
         if (lastStriker.current === 'PLAYER') {
           onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
         } else {
