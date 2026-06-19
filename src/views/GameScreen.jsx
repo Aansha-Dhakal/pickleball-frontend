@@ -296,7 +296,7 @@ export default function GameScreen({ difficulty, matchId, username, onGameEnd })
   const handleScore = useCallback(({ scorer, reason }) => {
     if (gameOverRef.current) return;
     setGameActive(false); ballRef.current?.stop();
-    const msgs = { DOUBLE_BOUNCE:'2 bounces', MISSED_SHOT:'Ball out', BOT_MISS:'AI missed', OUT_OF_BOUNDS:'Out of bounds' };
+    const msgs = { DOUBLE_BOUNCE:'2 bounces', MISSED_SHOT:'Ball out', BOT_MISS:'AI missed', OUT_OF_BOUNDS:'Out of bounds', BALL_OUT:'Ball out' };
     if (scorer==='player') {
       playerScoreRef.current += 1; setPlayerScore(playerScoreRef.current);
       servingRef.current = 'player';
