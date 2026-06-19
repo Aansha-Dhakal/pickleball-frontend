@@ -7,53 +7,42 @@ const BALL_RADIUS = 0.15;
 const FLOOR_Y     = BALL_RADIUS;
 const GRAVITY     = -18;
 
-/*
-  SCORING RULES — one source of truth:
-
-  After a HIT:
-  - Ball must cross net and land IN opponent's court
-  - If it lands OUT (first bounce out of bounds) → hitter loses
-  - If it lands IN then goes anywhere after → receiver must return it
-    (second bounce = double bounce = hitter of that side wins)
-  - Mid-air past baseline without bouncing → the person who sent it there loses
-
-  KEY: we track firstBounceSide per rally (resets on each hit()).
-  The OUT check only applies on the FIRST bounce.
-  After the first in-bounds bounce, second bounce = double bounce (receiver loses).
-*/
-
 const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
   const meshRef   = useRef();
   const shadowRef = useRef();
-  const vel               = useRef(new THREE.Vector3());
-  const active            = useRef(false);
-  const lastStriker       = useRef('NONE');
-  const playerSideBounces = useRef(0);
-  const aiSideBounces     = useRef(0);
-  const currentSide       = useRef(null);
-  const prevY             = useRef(1);
-  const prevZ             = useRef(0);
-  const hasBouncedThisRally = useRef(false); // did ball bounce IN-BOUNDS this rally?
+  const vel                 = useRef(new THREE.Vector3());
+  const active              = useRef(false);
+  const lastStriker         = useRef('NONE');
+  const playerSideBounces   = useRef(0);
+  const aiSideBounces       = useRef(0);
+  const currentSide         = useRef(null);
+  const prevY               = useRef(1);
+  const prevZ               = useRef(0);
+
+  // Who wins if the ball goes out or past baseline?
+  // Set on every valid in-bounds bounce: the hitter of that shot wins.
+  // Null = ball hasn't bounced yet = hitter is responsible.
+  const rallyWinner = useRef(null); // 'player' | 'ai' | null
 
   useImperativeHandle(ref, () => ({
     launch(pos, velocity, striker = 'PLAYER') {
       if (!meshRef.current) return;
       meshRef.current.position.set(pos.x, pos.y, pos.z);
       vel.current.set(velocity.x, velocity.y, velocity.z);
-      prevY.current               = pos.y;
-      prevZ.current               = pos.z;
-      playerSideBounces.current   = 0;
-      aiSideBounces.current       = 0;
-      currentSide.current         = pos.z > 0 ? 'player' : 'ai';
-      lastStriker.current         = striker;
-      hasBouncedThisRally.current = false;
-      active.current              = true;
+      prevY.current             = pos.y;
+      prevZ.current             = pos.z;
+      playerSideBounces.current = 0;
+      aiSideBounces.current     = 0;
+      currentSide.current       = pos.z > 0 ? 'player' : 'ai';
+      lastStriker.current       = striker;
+      rallyWinner.current       = null;
+      active.current            = true;
     },
     stop() { active.current = false; vel.current.set(0, 0, 0); },
     hit(v, striker = 'PLAYER') {
       vel.current.set(v.x, v.y, v.z);
-      lastStriker.current         = striker;
-      hasBouncedThisRally.current = false; // new shot — reset
+      lastStriker.current = striker;
+      rallyWinner.current = null; // reset — new shot in flight
     },
     getPosition()    { return meshRef.current?.position.clone() ?? new THREE.Vector3(); },
     getVelocity()    { return vel.current.clone(); },
@@ -77,7 +66,6 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
     pos.y += v.y * dt;
     pos.z += v.z * dt;
 
-    // Shadow
     if (shadowRef.current) {
       shadowRef.current.position.x = pos.x;
       shadowRef.current.position.z = pos.z;
@@ -85,7 +73,6 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       shadowRef.current.scale.set(s, s, s);
     }
 
-    // Track side crossing
     const nowSide = pos.z > 0 ? 'player' : 'ai';
     if (nowSide !== currentSide.current) {
       if (nowSide === 'player') playerSideBounces.current = 0;
@@ -93,17 +80,17 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       currentSide.current = nowSide;
     }
 
-    // ── NET COLLISION ──
+    // ── NET ──
     const crossedFromPlayer = prevZ.current >  0.12 && pos.z <=  0.12;
     const crossedFromAI     = prevZ.current < -0.12 && pos.z >= -0.12;
     if ((crossedFromPlayer || crossedFromAI) && pos.y < NET_H + BALL_RADIUS) {
       active.current = false;
-      if (onFault) onFault({ reason: 'NET_HIT', striker: lastStriker.current, position: pos.clone() });
+      onFault?.({ reason: 'NET_HIT', striker: lastStriker.current, position: pos.clone() });
       prevY.current = pos.y; prevZ.current = pos.z;
       return;
     }
 
-    // ── FLOOR CONTACT ──
+    // ── FLOOR ──
     if (pos.y <= FLOOR_Y && prevY.current > FLOOR_Y) {
       pos.y = FLOOR_Y;
       v.y   = Math.abs(v.y) * 0.52;
@@ -111,27 +98,23 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       v.z  *= 0.88;
       if (Math.abs(v.y) < 0.4) v.y = 0;
 
-      const halfW = COURT_W / 2;
-      const halfL = COURT_L / 2;
-      const inBounds = Math.abs(pos.x) <= halfW + 0.05 && Math.abs(pos.z) <= halfL + 0.05;
+      const halfW  = COURT_W / 2;
+      const halfL  = COURT_L / 2;
+      const inBoundsX = Math.abs(pos.x) <= halfW + 0.05;
+      const inBoundsZ = Math.abs(pos.z) <= halfL + 0.05;
+      const inBounds  = inBoundsX && inBoundsZ;
 
       if (!inBounds) {
-        // ── FIRST BOUNCE OUT OF BOUNDS ──
-        // Ball landed out of court — whoever hit it there loses
-        // UNLESS the ball already bounced in-bounds — then it's a missed return
+        // Ball hit the floor outside the court
         active.current = false;
 
-        if (hasBouncedThisRally.current) {
-          // Ball already bounced in bounds — this is a SECOND bounce = receiver loses
-          // The side it's currently on is who missed it
-          const side = pos.z > 0 ? 'player' : 'ai';
-          if (side === 'player') {
-            onScore?.({ scorer: 'ai', reason: 'DOUBLE_BOUNCE' });
-          } else {
-            onScore?.({ scorer: 'player', reason: 'DOUBLE_BOUNCE' });
-          }
+        if (rallyWinner.current !== null) {
+          // Ball already bounced in bounds — rally winner was decided then
+          // The hitter of the shot that landed in bounds wins
+          onScore?.({ scorer: rallyWinner.current, reason: 'OUT_OF_BOUNDS' });
         } else {
-          // First bounce and it's already out — hitter sent it out
+          // Ball never bounced in bounds — hitter sent it directly out
+          // Hitter loses
           if (lastStriker.current === 'PLAYER') {
             onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
           } else {
@@ -143,7 +126,14 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       }
 
       // ── VALID IN-BOUNDS BOUNCE ──
-      hasBouncedThisRally.current = true;
+      // The person who HIT the ball wins if it bounces in opponent's court
+      // Set rallyWinner = whoever hit the shot that just landed in bounds
+      if (rallyWinner.current === null) {
+        // First bounce — set winner to whoever hit it here
+        // If lastStriker is PLAYER and ball lands on AI side (z<0) → player wins
+        // If lastStriker is AI and ball lands on player side (z>0) → AI wins
+        rallyWinner.current = lastStriker.current === 'PLAYER' ? 'player' : 'ai';
+      }
 
       const side = pos.z > 0 ? 'player' : 'ai';
       if (side === 'player') playerSideBounces.current += 1;
@@ -153,11 +143,12 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
         ? playerSideBounces.current
         : aiSideBounces.current;
 
-      if (onBounce) onBounce({ position: pos.clone(), side, sideBounces });
+      onBounce?.({ position: pos.clone(), side, sideBounces });
 
-      // ── DOUBLE BOUNCE — receiver didn't return in time ──
+      // ── DOUBLE BOUNCE ──
       if (sideBounces >= 2) {
         active.current = false;
+        // Side that let it bounce twice loses
         if (side === 'player') onScore?.({ scorer: 'ai',    reason: 'DOUBLE_BOUNCE' });
         else                   onScore?.({ scorer: 'player', reason: 'DOUBLE_BOUNCE' });
         prevY.current = pos.y; prevZ.current = pos.z;
@@ -165,14 +156,13 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       }
     }
 
-    // ── MID-AIR PAST BASELINE (never bounced) ──
+    // ── MID-AIR BOUNDARY CHECKS ──
     if (pos.y > FLOOR_Y) {
+      // Past AI baseline mid-air
       if (pos.z < -(COURT_L / 2 + 2)) {
         active.current = false;
-        // Past AI baseline in the air
-        if (hasBouncedThisRally.current) {
-          // Already bounced on AI side — player scored, AI missed the return
-          onScore?.({ scorer: 'player', reason: 'MISSED_SHOT' });
+        if (rallyWinner.current !== null) {
+          onScore?.({ scorer: rallyWinner.current, reason: 'MISSED_SHOT' });
         } else {
           // Never bounced — player hit it too long
           onScore?.({ scorer: 'ai', reason: 'MISSED_SHOT' });
@@ -180,12 +170,11 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
         prevY.current = pos.y; prevZ.current = pos.z;
         return;
       }
+      // Past player baseline mid-air
       if (pos.z > COURT_L / 2 + 2) {
         active.current = false;
-        // Past player baseline in the air
-        if (hasBouncedThisRally.current) {
-          // Already bounced on player side — AI scored, player missed the return
-          onScore?.({ scorer: 'ai', reason: 'MISSED_SHOT' });
+        if (rallyWinner.current !== null) {
+          onScore?.({ scorer: rallyWinner.current, reason: 'MISSED_SHOT' });
         } else {
           // Never bounced — AI hit it too long
           onScore?.({ scorer: 'player', reason: 'MISSED_SHOT' });
@@ -193,7 +182,7 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
         prevY.current = pos.y; prevZ.current = pos.z;
         return;
       }
-      // Sideways out mid-air — hitter responsible
+      // Sideways mid-air — hitter responsible
       if (Math.abs(pos.x) > COURT_W / 2 + 0.3) {
         active.current = false;
         if (lastStriker.current === 'PLAYER') {
