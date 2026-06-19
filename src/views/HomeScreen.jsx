@@ -19,20 +19,26 @@ const BREAKDOWN = [
   {label:'Smashes',pct:10,color:'#FF6A3D'},
 ];
 const DOT_COLORS = {DRIVE:'#B6FF2E',DINK:'#4fc4cf',VOLLEY:'#F2D026',LOB:'#FF6A3D'};
-
 const NAV = [
   {id:'home',      label:'Home',       d:'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z'},
   {id:'statistics',label:'Statistics', d:'M18 20V10M12 20V4M6 20v-6'},
   {id:'history',   label:'History',    d:'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'},
 ];
-
 const DIFFS = [
   {id:'easy',  label:'EASY',   desc:'Perfect for beginners. Focus on control.',     icon:'#7CFF65', emoji:'🟢'},
   {id:'medium',label:'MEDIUM', desc:'Balanced gameplay. Improve your skills.',      icon:'#B6FF2E', emoji:'🟡'},
   {id:'hard',  label:'HARD',   desc:'For advanced players. High speed & challenge.',icon:'#FF6A3D', emoji:'🟠'},
 ];
-
 const API = import.meta.env.VITE_API_URL || 'https://pickleball-backend-h86y.onrender.com';
+
+// Shared glass style — light enough to see bg through
+const glass = (extra={}) => ({
+  background: 'rgba(7,9,12,0.35)',
+  backdropFilter: 'blur(14px)',
+  WebkitBackdropFilter: 'blur(14px)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  ...extra,
+});
 
 function NavIcon({d,size=17,color='#6E7781'}) {
   return (
@@ -48,22 +54,16 @@ function DonutChart() {
   let off=0;
   return (
     <svg width={120} height={120}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1a2228" strokeWidth={sw}/>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={sw}/>
       {BREAKDOWN.map((s,i)=>{
         const dash=(s.pct/100)*circ;
-        const el=(
-          <circle key={i} cx={cx} cy={cy} r={r} fill="none"
-            stroke={s.color} strokeWidth={sw}
-            strokeDasharray={`${dash} ${circ-dash}`}
-            strokeDashoffset={-off*circ/100}
-            style={{transform:'rotate(-90deg)',transformOrigin:'center'}}
-          />
-        );
-        off+=s.pct;
-        return el;
+        const el=(<circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={sw}
+          strokeDasharray={`${dash} ${circ-dash}`} strokeDashoffset={-off*circ/100}
+          style={{transform:'rotate(-90deg)',transformOrigin:'center'}}/>);
+        off+=s.pct; return el;
       })}
       <text x={cx} y={cy-5} textAnchor="middle" fill="#fff" fontSize="16" fontWeight="700" fontFamily="Space Grotesk,monospace">87%</text>
-      <text x={cx} y={cy+10} textAnchor="middle" fill="#6E7781" fontSize="8" fontFamily="Inter,sans-serif" letterSpacing="1">ACCURACY</text>
+      <text x={cx} y={cy+10} textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="8" fontFamily="Inter,sans-serif" letterSpacing="1">ACCURACY</text>
     </svg>
   );
 }
@@ -72,14 +72,14 @@ function ShotMap() {
   const W=150,H=110,P=10,CW=20,CL=22;
   return (
     <svg width={W} height={H}>
-      <rect x={P} y={P} width={W-P*2} height={H-P*2} rx="4" fill="rgba(0,50,25,0.6)" stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>
-      <line x1={P} y1={H/2} x2={W-P} y2={H/2} stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/>
-      <line x1={P} y1={H/2-16} x2={W-P} y2={H/2-16} stroke="rgba(255,255,255,0.07)" strokeWidth="1" strokeDasharray="2,2"/>
-      <line x1={P} y1={H/2+16} x2={W-P} y2={H/2+16} stroke="rgba(255,255,255,0.07)" strokeWidth="1" strokeDasharray="2,2"/>
+      <rect x={P} y={P} width={W-P*2} height={H-P*2} rx="4" fill="rgba(0,40,20,0.45)" stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>
+      <line x1={P} y1={H/2} x2={W-P} y2={H/2} stroke="rgba(255,255,255,0.35)" strokeWidth="1.5"/>
+      <line x1={P} y1={H/2-16} x2={W-P} y2={H/2-16} stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="2,2"/>
+      <line x1={P} y1={H/2+16} x2={W-P} y2={H/2+16} stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="2,2"/>
       {SHOTS.map((s,i)=>{
         const sx=P+((s.x+CW/2)/CW)*(W-P*2);
         const sy=P+(Math.abs(s.z)/CL)*(H-P*2)*0.88;
-        return <circle key={i} cx={sx} cy={sy} r={3.5} fill={DOT_COLORS[s.t]} opacity={0.85}/>;
+        return <circle key={i} cx={sx} cy={sy} r={3.5} fill={DOT_COLORS[s.t]} opacity={0.9}/>;
       })}
     </svg>
   );
@@ -99,7 +99,7 @@ function PerfTrend() {
     <svg width={W} height={H}>
       <defs>
         <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#B6FF2E" stopOpacity="0.25"/>
+          <stop offset="0%" stopColor="#B6FF2E" stopOpacity="0.2"/>
           <stop offset="100%" stopColor="#B6FF2E" stopOpacity="0"/>
         </linearGradient>
       </defs>
@@ -116,29 +116,28 @@ function PerfTrend() {
   );
 }
 
-// Stats panel shown below PLAY button — uses real last match data
-function RecentStatsPanel({ stats }) {
+function RecentStatsPanel({stats}) {
   if (!stats) return (
-    <div style={{padding:'14px',background:'rgba(22,29,34,0.6)',borderRadius:'12px',border:'1px solid rgba(255,255,255,0.05)',marginTop:'4px'}}>
-      <div style={{color:'#6E7781',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'10px'}}>Last Match</div>
-      <div style={{color:'#6E7781',fontSize:'11px',textAlign:'center',padding:'10px 0'}}>Play your first match!</div>
+    <div style={{...glass({borderRadius:'12px'}),padding:'14px',marginTop:'4px'}}>
+      <div style={{color:'rgba(255,255,255,0.35)',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'10px'}}>Last Match</div>
+      <div style={{color:'rgba(255,255,255,0.3)',fontSize:'11px',textAlign:'center',padding:'10px 0'}}>Play your first match!</div>
     </div>
   );
-  const items = [
-    {l:'Accuracy',    v: stats.accuracy   ? `${stats.accuracy}%`   : 'N/A'},
-    {l:'Avg Reaction',v: stats.avgReaction ? `${stats.avgReaction}ms` : 'N/A'},
-    {l:'Total Shots', v: stats.totalShots  ?? 'N/A'},
-    {l:'Faults',      v: stats.totalFaults ?? 'N/A'},
-    {l:'Difficulty',  v: stats.difficulty  ?? 'N/A'},
-    {l:'Duration',    v: stats.duration    ?? 'N/A'},
+  const items=[
+    {l:'Accuracy',    v:stats.accuracy   ?`${stats.accuracy}%`    :'N/A'},
+    {l:'Avg Reaction',v:stats.avgReaction?`${stats.avgReaction}ms`:'N/A'},
+    {l:'Total Shots', v:stats.totalShots ??'N/A'},
+    {l:'Faults',      v:stats.totalFaults??'N/A'},
+    {l:'Difficulty',  v:stats.difficulty ??'N/A'},
+    {l:'Duration',    v:stats.duration   ??'N/A'},
   ];
   return (
-    <div style={{padding:'14px',background:'rgba(22,29,34,0.6)',borderRadius:'12px',border:'1px solid rgba(255,255,255,0.05)',marginTop:'4px'}}>
-      <div style={{color:'#6E7781',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'10px'}}>Last Match</div>
+    <div style={{...glass({borderRadius:'12px'}),padding:'14px',marginTop:'4px'}}>
+      <div style={{color:'rgba(255,255,255,0.35)',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'10px'}}>Last Match</div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
         {items.map(r=>(
           <div key={r.l}>
-            <div style={{color:'#6E7781',fontSize:'8px',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'2px'}}>{r.l}</div>
+            <div style={{color:'rgba(255,255,255,0.3)',fontSize:'8px',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'2px'}}>{r.l}</div>
             <div style={{color:'#fff',fontSize:'13px',fontWeight:'700',fontFamily:"'Space Grotesk',monospace"}}>{r.v}</div>
           </div>
         ))}
@@ -147,8 +146,7 @@ function RecentStatsPanel({ stats }) {
   );
 }
 
-// Statistics panel shown when nav = statistics
-function StatisticsView({ username, totalMatches }) {
+function StatisticsView({totalMatches}) {
   return (
     <div style={{padding:'24px',display:'flex',flexDirection:'column',gap:'20px'}}>
       <h2 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'36px',color:'#fff',letterSpacing:'2px'}}>
@@ -156,38 +154,38 @@ function StatisticsView({ username, totalMatches }) {
       </h2>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'14px'}}>
         {[
-          {label:'Total Matches',  value: totalMatches ?? '—', color:'#B6FF2E'},
-          {label:'Avg Accuracy',   value:'87%',                color:'#B6FF2E'},
-          {label:'Avg Reaction',   value:'740ms',              color:'#4fc4cf'},
-          {label:'Total Shots',    value:'1,420',              color:'#fff'},
-          {label:'Total Faults',   value:'142',                color:'#FF6A3D'},
-          {label:'Best Streak',    value:'28 wins',            color:'#F2D026'},
+          {label:'Total Matches', value:totalMatches??'—', color:'#B6FF2E'},
+          {label:'Avg Accuracy',  value:'87%',             color:'#B6FF2E'},
+          {label:'Avg Reaction',  value:'740ms',           color:'#4fc4cf'},
+          {label:'Total Shots',   value:'1,420',           color:'#fff'},
+          {label:'Total Faults',  value:'142',             color:'#FF6A3D'},
+          {label:'Best Streak',   value:'28 wins',         color:'#F2D026'},
         ].map(s=>(
-          <div key={s.label} style={{background:'rgba(17,22,26,0.88)',borderRadius:'14px',border:'1px solid rgba(255,255,255,0.05)',padding:'18px',backdropFilter:'blur(12px)'}}>
-            <div style={{color:'#6E7781',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'8px'}}>{s.label}</div>
+          <div key={s.label} style={{...glass({borderRadius:'14px'}),padding:'18px'}}>
+            <div style={{color:'rgba(255,255,255,0.35)',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'8px'}}>{s.label}</div>
             <div style={{fontFamily:"'Space Grotesk',monospace",fontSize:'28px',fontWeight:'700',color:s.color}}>{s.value}</div>
           </div>
         ))}
       </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'14px'}}>
-        <div style={{background:'rgba(17,22,26,0.88)',borderRadius:'14px',border:'1px solid rgba(255,255,255,0.05)',padding:'18px',backdropFilter:'blur(12px)'}}>
-          <div style={{color:'#6E7781',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'10px'}}>Shot Breakdown</div>
+        <div style={{...glass({borderRadius:'14px'}),padding:'18px'}}>
+          <div style={{color:'rgba(255,255,255,0.35)',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'10px'}}>Shot Breakdown</div>
           <div style={{display:'flex',alignItems:'center',gap:'14px'}}>
             <DonutChart/>
             <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
               {BREAKDOWN.map(s=>(
                 <div key={s.label} style={{display:'flex',alignItems:'center',gap:'6px'}}>
                   <div style={{width:'8px',height:'8px',borderRadius:'2px',background:s.color}}/>
-                  <span style={{color:'#9EA7AE',fontSize:'10px',flex:1}}>{s.label}</span>
+                  <span style={{color:'rgba(255,255,255,0.5)',fontSize:'10px',flex:1}}>{s.label}</span>
                   <span style={{color:'#fff',fontSize:'10px',fontWeight:'700',fontFamily:"'Space Grotesk',monospace"}}>{s.pct}%</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
-        <div style={{background:'rgba(17,22,26,0.88)',borderRadius:'14px',border:'1px solid rgba(255,255,255,0.05)',padding:'18px',backdropFilter:'blur(12px)'}}>
-          <div style={{color:'#6E7781',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'4px'}}>Performance Trend</div>
-          <div style={{color:'#6E7781',fontSize:'8px',marginBottom:'8px'}}>Last 11 sessions</div>
+        <div style={{...glass({borderRadius:'14px'}),padding:'18px'}}>
+          <div style={{color:'rgba(255,255,255,0.35)',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'4px'}}>Performance Trend</div>
+          <div style={{color:'rgba(255,255,255,0.3)',fontSize:'8px',marginBottom:'8px'}}>Last 11 sessions</div>
           <PerfTrend/>
         </div>
       </div>
@@ -195,50 +193,40 @@ function StatisticsView({ username, totalMatches }) {
   );
 }
 
-export default function HomeScreen({onStartGame, onHistory, username, onLogout}) {
-  const [nav,          setNav]          = useState('home');
-  const [diff,         setDiff]         = useState('medium');
-  const [hov,          setHov]          = useState(null);
-  const [totalMatches, setTotalMatches] = useState(null);
-  const [lastMatchStats, setLastMatchStats] = useState(null);
-  const [loadingStats, setLoadingStats] = useState(true);
+export default function HomeScreen({onStartGame,onHistory,username,onLogout}) {
+  const [nav,           setNav]           = useState('home');
+  const [diff,          setDiff]          = useState('medium');
+  const [hov,           setHov]           = useState(null);
+  const [totalMatches,  setTotalMatches]  = useState(null);
+  const [lastMatchStats,setLastMatchStats]= useState(null);
+  const [loadingStats,  setLoadingStats]  = useState(true);
 
-  // Fetch real match data for this user
-  useEffect(() => {
-    if (!username) return;
+  useEffect(()=>{
+    if(!username) return;
     fetch(`${API}/api/matches?user_id=${encodeURIComponent(username)}`)
-      .then(r => r.ok ? r.json() : [])
-      .then(matches => {
+      .then(r=>r.ok?r.json():[])
+      .then(matches=>{
         setTotalMatches(matches.length);
-        if (matches.length > 0) {
-          const last = matches[0]; // most recent
-          // Calculate accuracy from shots vs faults
-          const totalShots  = last.total_shots  ?? 0;
-          const totalFaults = last.total_faults ?? 0;
-          const accuracy    = totalShots > 0
-            ? Math.round((totalShots / (totalShots + totalFaults)) * 100)
-            : null;
-          const avgReaction = last.avg_reaction_ms
-            ? Math.round(last.avg_reaction_ms)
-            : null;
+        if(matches.length>0){
+          const last=matches[0];
+          const totalShots =last.total_shots ??0;
+          const totalFaults=last.total_faults??0;
+          const accuracy   =totalShots>0?Math.round((totalShots/(totalShots+totalFaults))*100):null;
           setLastMatchStats({
             accuracy,
-            avgReaction,
-            totalShots,
-            totalFaults,
-            difficulty: last.difficulty
-              ? last.difficulty.charAt(0).toUpperCase() + last.difficulty.slice(1)
-              : 'N/A',
-            duration: 'N/A',
+            avgReaction:last.avg_reaction_ms?Math.round(last.avg_reaction_ms):null,
+            totalShots,totalFaults,
+            difficulty:last.difficulty?last.difficulty.charAt(0).toUpperCase()+last.difficulty.slice(1):'N/A',
+            duration:'N/A',
           });
         }
         setLoadingStats(false);
       })
-      .catch(() => setLoadingStats(false));
-  }, [username]);
+      .catch(()=>setLoadingStats(false));
+  },[username]);
 
   return (
-    <div style={{width:'100vw',height:'100vh',overflow:'hidden',position:'relative',fontFamily:"'Inter',sans-serif",background:'#07090C'}}>
+    <div style={{width:'100vw',height:'100vh',overflow:'hidden',position:'relative',fontFamily:"'Inter',sans-serif"}}>
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
@@ -247,24 +235,39 @@ export default function HomeScreen({onStartGame, onHistory, username, onLogout})
         .fi{animation:fi 0.5s ease forwards;opacity:0}
         @keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
         .ch{transition:all 0.2s ease}
-        .ch:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,0.4),0 0 20px rgba(182,255,46,0.07)}
+        .ch:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,0.3),0 0 16px rgba(182,255,46,0.08)}
         .nb{transition:all 0.15s ease;border:none;background:transparent;}
-        .nb:hover{background:rgba(255,255,255,0.04)!important}
+        .nb:hover{background:rgba(255,255,255,0.06)!important;border-radius:9px}
       `}</style>
 
-      {/* BG */}
-      <div style={{position:'absolute',inset:0,zIndex:0,backgroundImage:`url(${BG_SRC})`,backgroundSize:'cover',backgroundPosition:'center',filter:'brightness(0.3) blur(1px)'}}/>
-      <div style={{position:'absolute',inset:0,zIndex:1,background:'linear-gradient(to right,rgba(7,9,12,0.97) 0%,rgba(7,9,12,0.55) 40%,rgba(7,9,12,0.15) 65%,rgba(7,9,12,0.85) 100%)'}}/>
-      <div style={{position:'absolute',inset:0,zIndex:1,background:'radial-gradient(ellipse at 55% 45%,rgba(182,255,46,0.04) 0%,transparent 60%)'}}/>
+      {/* Full BG — lighter brightness so paddle/ball show */}
+      <div style={{position:'absolute',inset:0,zIndex:0,
+        backgroundImage:`url(${BG_SRC})`,
+        backgroundSize:'cover',backgroundPosition:'center',
+        filter:'brightness(0.55)',
+      }}/>
+      {/* Subtle gradient — only darken edges, keep center clear */}
+      <div style={{position:'absolute',inset:0,zIndex:1,
+        background:'linear-gradient(to right,rgba(7,9,12,0.82) 0%,rgba(7,9,12,0.2) 35%,rgba(7,9,12,0.05) 60%,rgba(7,9,12,0.65) 100%)',
+      }}/>
+      {/* Top/bottom fade */}
+      <div style={{position:'absolute',inset:0,zIndex:1,
+        background:'linear-gradient(to bottom,rgba(7,9,12,0.5) 0%,transparent 20%,transparent 75%,rgba(7,9,12,0.6) 100%)',
+      }}/>
 
       <div style={{position:'relative',zIndex:2,display:'flex',width:'100%',height:'100%'}}>
 
-        {/* ── SIDEBAR ── */}
-        <div style={{width:'220px',flexShrink:0,height:'100%',background:'rgba(17,22,26,0.9)',backdropFilter:'blur(20px)',borderRight:'1px solid rgba(255,255,255,0.05)',display:'flex',flexDirection:'column',padding:'22px 0'}}>
+        {/* ── SIDEBAR — very transparent ── */}
+        <div style={{
+          width:'220px',flexShrink:0,height:'100%',
+          ...glass({borderRight:'1px solid rgba(255,255,255,0.07)'}),
+          background:'rgba(7,9,12,0.45)',
+          display:'flex',flexDirection:'column',padding:'22px 0',
+        }}>
           {/* Logo */}
-          <div style={{padding:'0 18px 22px',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+          <div style={{padding:'0 18px 22px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
             <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-              <div style={{width:'34px',height:'34px',borderRadius:'9px',background:'linear-gradient(135deg,#B6FF2E,#7ccc1a)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 14px rgba(182,255,46,0.35)',fontSize:'16px'}}>🏓</div>
+              <div style={{width:'34px',height:'34px',borderRadius:'9px',background:'linear-gradient(135deg,#B6FF2E,#7ccc1a)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 14px rgba(182,255,46,0.4)',fontSize:'16px'}}>🏓</div>
               <div>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'16px',letterSpacing:'2px',color:'#fff',lineHeight:1}}>PICKLEBALL</div>
                 <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'10px',letterSpacing:'3px',color:'#B6FF2E',lineHeight:1}}>SIMULATOR</div>
@@ -272,131 +275,141 @@ export default function HomeScreen({onStartGame, onHistory, username, onLogout})
             </div>
           </div>
 
-          {/* Nav — only Home, Statistics, History */}
+          {/* Nav */}
           <nav style={{flex:1,padding:'14px 10px',display:'flex',flexDirection:'column',gap:'2px'}}>
             {NAV.map(n=>(
-              <button key={n.id} className="nb" onClick={()=>{ setNav(n.id); if(n.id==='history') onHistory(); }}
-                style={{display:'flex',alignItems:'center',gap:'10px',padding:'9px 10px',borderRadius:'9px',cursor:'pointer',width:'100%',textAlign:'left',background:nav===n.id?'rgba(182,255,46,0.1)':'transparent'}}>
-                <NavIcon d={n.d} color={nav===n.id?'#B6FF2E':'#6E7781'}/>
-                <span style={{fontSize:'13px',fontWeight:'500',color:nav===n.id?'#B6FF2E':'#9EA7AE'}}>{n.label}</span>
+              <button key={n.id} className="nb"
+                onClick={()=>{ setNav(n.id); if(n.id==='history') onHistory(); }}
+                style={{display:'flex',alignItems:'center',gap:'10px',padding:'9px 10px',borderRadius:'9px',cursor:'pointer',width:'100%',textAlign:'left',
+                  background:nav===n.id?'rgba(182,255,46,0.12)':'transparent',
+                }}>
+                <NavIcon d={n.d} color={nav===n.id?'#B6FF2E':'rgba(255,255,255,0.45)'}/>
+                <span style={{fontSize:'13px',fontWeight:'500',color:nav===n.id?'#B6FF2E':'rgba(255,255,255,0.55)'}}>{n.label}</span>
                 {nav===n.id&&<div style={{marginLeft:'auto',width:'4px',height:'4px',borderRadius:'50%',background:'#B6FF2E',boxShadow:'0 0 6px #B6FF2E'}}/>}
               </button>
             ))}
           </nav>
 
-          {/* User card — just name, no level/xp */}
-          <div style={{margin:'0 10px',padding:'12px 14px',background:'rgba(22,29,34,0.9)',borderRadius:'13px',border:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',gap:'10px'}}>
-            <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'linear-gradient(135deg,#2a3a4a,#1a2530)',border:'1.5px solid rgba(182,255,46,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',flexShrink:0}}>👤</div>
+          {/* User card */}
+          <div style={{margin:'0 10px',padding:'12px 14px',...glass({borderRadius:'13px'}),display:'flex',alignItems:'center',gap:'10px'}}>
+            <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'rgba(255,255,255,0.1)',border:'1.5px solid rgba(182,255,46,0.4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px',flexShrink:0}}>👤</div>
             <div style={{flex:1,minWidth:0}}>
               <div style={{color:'#fff',fontSize:'13px',fontWeight:'600',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{username||'Player'}</div>
               <div style={{color:'#B6FF2E',fontSize:'10px',fontFamily:"'Space Grotesk',monospace"}}>
-                {loadingStats ? '...' : `${totalMatches ?? 0} matches played`}
+                {loadingStats?'...': `${totalMatches??0} matches`}
               </div>
             </div>
-            <button onClick={onLogout} style={{padding:'4px 8px',borderRadius:'6px',border:'1px solid rgba(255,106,61,0.3)',background:'rgba(255,106,61,0.07)',color:'rgba(255,106,61,0.7)',fontSize:'8px',letterSpacing:'1px',cursor:'pointer',fontFamily:'monospace',flexShrink:0}}>OUT</button>
+            <button onClick={onLogout} style={{padding:'4px 8px',borderRadius:'6px',border:'1px solid rgba(255,106,61,0.35)',background:'rgba(255,106,61,0.1)',color:'rgba(255,106,61,0.8)',fontSize:'8px',letterSpacing:'1px',cursor:'pointer',fontFamily:'monospace',flexShrink:0}}>OUT</button>
           </div>
         </div>
 
         {/* ── MAIN ── */}
         <div style={{flex:1,height:'100%',display:'flex',flexDirection:'column',overflow:'hidden'}}>
 
-          {/* Topbar — no streak/sessions, just clean */}
-          <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',padding:'14px 20px',borderBottom:'1px solid rgba(255,255,255,0.04)',flexShrink:0}}>
-            <div style={{width:'32px',height:'32px',borderRadius:'9px',background:'rgba(17,22,26,0.8)',border:'1px solid rgba(255,255,255,0.05)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+          {/* Topbar */}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',padding:'14px 20px',borderBottom:'1px solid rgba(255,255,255,0.05)',flexShrink:0,background:'rgba(7,9,12,0.2)',backdropFilter:'blur(8px)'}}>
+            <div style={{width:'32px',height:'32px',borderRadius:'9px',...glass(),display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
               <span style={{fontSize:'14px'}}>🔔</span>
             </div>
           </div>
 
           {/* Content */}
           <div style={{flex:1,display:'flex',overflow:'hidden'}}>
-
-            {/* Center — switches between Home and Statistics */}
             <div style={{flex:1,overflowY:'auto'}}>
-              {nav === 'statistics' ? (
-                <StatisticsView username={username} totalMatches={totalMatches}/>
+              {nav==='statistics' ? (
+                <StatisticsView totalMatches={totalMatches}/>
               ) : (
-                <div style={{padding:'24px 24px 18px',display:'flex',flexDirection:'column',gap:'18px',height:'100%'}}>
+                <div style={{padding:'28px 28px 20px',display:'flex',flexDirection:'column',gap:'20px',height:'100%'}}>
                   {/* Hero */}
                   <div className="fi" style={{animationDelay:'0.05s'}}>
-                    <h1 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'64px',lineHeight:0.88,letterSpacing:'-0.02em',color:'#fff',textShadow:'0 0 50px rgba(182,255,46,0.12)',marginBottom:'6px'}}>
+                    <h1 style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'68px',lineHeight:0.88,letterSpacing:'-0.02em',color:'#fff',
+                      textShadow:'0 2px 30px rgba(0,0,0,0.8),0 0 60px rgba(182,255,46,0.1)',marginBottom:'8px'}}>
                       PICKLEBALL<br/><span style={{color:'#B6FF2E'}}>SIMULATOR</span>
                     </h1>
-                    <p style={{color:'#9EA7AE',fontSize:'12px',lineHeight:1.65,maxWidth:'360px',marginBottom:'18px'}}>
+                    <p style={{color:'rgba(255,255,255,0.55)',fontSize:'12px',lineHeight:1.7,maxWidth:'360px',marginBottom:'20px',textShadow:'0 1px 8px rgba(0,0,0,0.8)'}}>
                       Improve your game with realistic physics,<br/>advanced analytics, and immersive practice.
                     </p>
-                    <div style={{display:'flex',gap:'24px'}}>
+                    <div style={{display:'flex',gap:'28px'}}>
                       {[{icon:'🎯',val:'92%',label:'Accuracy'},{icon:'⚡',val:'143',sub:'km/h',label:'Top Speed'},{icon:'🏆',val:'28',sub:'Wins',label:'Best Streak'}].map(s=>(
                         <div key={s.label} className="ch" style={{cursor:'default'}}>
                           <div style={{fontSize:'18px',marginBottom:'3px'}}>{s.icon}</div>
                           <div style={{display:'flex',alignItems:'baseline',gap:'3px'}}>
-                            <span style={{fontFamily:"'Space Grotesk',monospace",fontSize:'26px',fontWeight:'700',color:'#fff'}}>{s.val}</span>
-                            {s.sub&&<span style={{color:'#6E7781',fontSize:'11px'}}>{s.sub}</span>}
+                            <span style={{fontFamily:"'Space Grotesk',monospace",fontSize:'28px',fontWeight:'700',color:'#fff',textShadow:'0 2px 12px rgba(0,0,0,0.9)'}}>{s.val}</span>
+                            {s.sub&&<span style={{color:'rgba(255,255,255,0.5)',fontSize:'11px'}}>{s.sub}</span>}
                           </div>
-                          <div style={{color:'#6E7781',fontSize:'10px',letterSpacing:'0.15em',textTransform:'uppercase'}}>{s.label}</div>
+                          <div style={{color:'rgba(255,255,255,0.4)',fontSize:'10px',letterSpacing:'0.15em',textTransform:'uppercase'}}>{s.label}</div>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* 4 bottom cards */}
+                  {/* 4 bottom cards — very transparent */}
                   <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'12px',marginTop:'auto'}}>
-                    <div className="ch fi" style={{animationDelay:'0.2s',background:'rgba(17,22,26,0.88)',borderRadius:'16px',border:'1px solid rgba(255,255,255,0.05)',padding:'16px',backdropFilter:'blur(12px)'}}>
-                      <div style={{color:'#6E7781',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'10px'}}>Shot Placement</div>
-                      <ShotMap/>
-                    </div>
-                    <div className="ch fi" style={{animationDelay:'0.25s',background:'rgba(17,22,26,0.88)',borderRadius:'16px',border:'1px solid rgba(255,255,255,0.05)',padding:'16px',backdropFilter:'blur(12px)'}}>
-                      <div style={{color:'#6E7781',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'10px'}}>Shot Breakdown</div>
-                      <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-                        <DonutChart/>
-                        <div style={{display:'flex',flexDirection:'column',gap:'5px'}}>
-                          {BREAKDOWN.map(s=>(
-                            <div key={s.label} style={{display:'flex',alignItems:'center',gap:'5px'}}>
-                              <div style={{width:'7px',height:'7px',borderRadius:'2px',background:s.color,flexShrink:0}}/>
-                              <span style={{color:'#9EA7AE',fontSize:'9px',flex:1}}>{s.label}</span>
-                              <span style={{color:'#fff',fontSize:'9px',fontWeight:'700',fontFamily:"'Space Grotesk',monospace"}}>{s.pct}%</span>
+                    {[
+                      {label:'Shot Placement',  delay:'0.2s', content:<ShotMap/>},
+                      {label:'Shot Breakdown',   delay:'0.25s',content:(
+                        <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                          <DonutChart/>
+                          <div style={{display:'flex',flexDirection:'column',gap:'5px'}}>
+                            {BREAKDOWN.map(s=>(
+                              <div key={s.label} style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                                <div style={{width:'7px',height:'7px',borderRadius:'2px',background:s.color,flexShrink:0}}/>
+                                <span style={{color:'rgba(255,255,255,0.45)',fontSize:'9px',flex:1}}>{s.label}</span>
+                                <span style={{color:'#fff',fontSize:'9px',fontWeight:'700',fontFamily:"'Space Grotesk',monospace"}}>{s.pct}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )},
+                      {label:'Performance Trend',delay:'0.3s', sub:'Last 11 sessions', content:<PerfTrend/>},
+                      {label:'Recent Session',   delay:'0.35s',content:(
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+                          {[{l:'Accuracy',v:'87%'},{l:'Avg. Speed',v:'98 km/h'},{l:'Total Shots',v:'142'},{l:'Session',v:'24:15'}].map(r=>(
+                            <div key={r.l}>
+                              <div style={{color:'rgba(255,255,255,0.3)',fontSize:'8px',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'2px'}}>{r.l}</div>
+                              <div style={{color:'#fff',fontSize:'13px',fontWeight:'700',fontFamily:"'Space Grotesk',monospace"}}>{r.v}</div>
                             </div>
                           ))}
                         </div>
+                      )},
+                    ].map(card=>(
+                      <div key={card.label} className="ch fi"
+                        style={{animationDelay:card.delay,...glass({borderRadius:'16px'}),padding:'16px',background:'rgba(7,9,12,0.4)'}}>
+                        <div style={{color:'rgba(255,255,255,0.4)',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:card.sub?'2px':'10px'}}>{card.label}</div>
+                        {card.sub&&<div style={{color:'rgba(255,255,255,0.25)',fontSize:'8px',marginBottom:'8px'}}>{card.sub}</div>}
+                        {card.content}
                       </div>
-                    </div>
-                    <div className="ch fi" style={{animationDelay:'0.3s',background:'rgba(17,22,26,0.88)',borderRadius:'16px',border:'1px solid rgba(255,255,255,0.05)',padding:'16px',backdropFilter:'blur(12px)'}}>
-                      <div style={{color:'#6E7781',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'4px'}}>Performance Trend</div>
-                      <div style={{color:'#6E7781',fontSize:'8px',marginBottom:'8px'}}>Last 11 sessions</div>
-                      <PerfTrend/>
-                    </div>
-                    <div className="ch fi" style={{animationDelay:'0.35s',background:'rgba(17,22,26,0.88)',borderRadius:'16px',border:'1px solid rgba(255,255,255,0.05)',padding:'16px',backdropFilter:'blur(12px)'}}>
-                      <div style={{color:'#6E7781',fontSize:'9px',letterSpacing:'0.18em',textTransform:'uppercase',marginBottom:'12px'}}>Recent Session</div>
-                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
-                        {[{l:'Accuracy',v:'87%'},{l:'Avg. Speed',v:'98 km/h'},{l:'Total Shots',v:'142'},{l:'Session',v:'24:15'}].map(r=>(
-                          <div key={r.l}>
-                            <div style={{color:'#6E7781',fontSize:'8px',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:'2px'}}>{r.l}</div>
-                            <div style={{color:'#fff',fontSize:'13px',fontWeight:'700',fontFamily:"'Space Grotesk',monospace"}}>{r.v}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* ── RIGHT PANEL ── */}
-            <div style={{width:'270px',flexShrink:0,height:'100%',background:'rgba(17,22,26,0.75)',backdropFilter:'blur(20px)',borderLeft:'1px solid rgba(255,255,255,0.05)',display:'flex',flexDirection:'column',padding:'20px 16px',gap:'10px',overflowY:'auto'}}>
-              <div style={{color:'#6E7781',fontSize:'9px',letterSpacing:'0.2em',textTransform:'uppercase',marginBottom:'2px'}}>Choose Mode</div>
+            {/* ── RIGHT PANEL — very transparent ── */}
+            <div style={{
+              width:'270px',flexShrink:0,height:'100%',
+              background:'rgba(7,9,12,0.45)',
+              backdropFilter:'blur(14px)',
+              WebkitBackdropFilter:'blur(14px)',
+              borderLeft:'1px solid rgba(255,255,255,0.07)',
+              display:'flex',flexDirection:'column',
+              padding:'20px 16px',gap:'10px',overflowY:'auto',
+            }}>
+              <div style={{color:'rgba(255,255,255,0.35)',fontSize:'9px',letterSpacing:'0.2em',textTransform:'uppercase',marginBottom:'2px'}}>Choose Mode</div>
 
               {DIFFS.map(d=>(
                 <div key={d.id} onClick={()=>setDiff(d.id)} className="ch"
                   style={{padding:'12px 14px',borderRadius:'14px',cursor:'pointer',
-                    background:diff===d.id?'rgba(182,255,46,0.07)':'rgba(22,29,34,0.85)',
-                    border:`1.5px solid ${diff===d.id?d.icon:'rgba(255,255,255,0.06)'}`,
+                    background:diff===d.id?`${d.icon}14`:'rgba(255,255,255,0.05)',
+                    border:`1.5px solid ${diff===d.id?d.icon:'rgba(255,255,255,0.08)'}`,
                     boxShadow:diff===d.id?`0 0 18px ${d.icon}22`:'none',
-                  }}
-                >
+                    backdropFilter:'blur(8px)',
+                  }}>
                   <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
                     <div style={{width:'30px',height:'30px',borderRadius:'8px',background:`${d.icon}18`,border:`1px solid ${d.icon}33`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'13px',flexShrink:0}}>{d.emoji}</div>
                     <div style={{flex:1}}>
-                      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'15px',letterSpacing:'2px',color:diff===d.id?d.icon:'#fff'}}>{d.label}</div>
-                      <div style={{color:'#6E7781',fontSize:'9px',lineHeight:1.4}}>{d.desc}</div>
+                      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'15px',letterSpacing:'2px',color:diff===d.id?d.icon:'rgba(255,255,255,0.85)'}}>{d.label}</div>
+                      <div style={{color:'rgba(255,255,255,0.35)',fontSize:'9px',lineHeight:1.4}}>{d.desc}</div>
                     </div>
                     {diff===d.id&&<div style={{width:'5px',height:'5px',borderRadius:'50%',background:d.icon,boxShadow:`0 0 6px ${d.icon}`,flexShrink:0}}/>}
                   </div>
@@ -408,12 +421,11 @@ export default function HomeScreen({onStartGame, onHistory, username, onLogout})
                 onMouseEnter={()=>setHov('play')} onMouseLeave={()=>setHov(null)}
                 style={{width:'100%',height:'60px',borderRadius:'14px',border:'none',cursor:'pointer',
                   background:'linear-gradient(135deg,#C7FF34,#A9E928)',
-                  boxShadow:hov==='play'?'0 0 36px rgba(182,255,46,0.5),0 6px 20px rgba(0,0,0,0.4)':'0 0 22px rgba(182,255,46,0.22),0 4px 14px rgba(0,0,0,0.3)',
+                  boxShadow:hov==='play'?'0 0 40px rgba(182,255,46,0.55),0 6px 20px rgba(0,0,0,0.3)':'0 0 22px rgba(182,255,46,0.25),0 4px 14px rgba(0,0,0,0.2)',
                   display:'flex',alignItems:'center',justifyContent:'center',gap:'10px',
                   transform:hov==='play'?'scale(1.02)':'scale(1)',transition:'all 0.15s ease',
                   marginTop:'4px',
-                }}
-              >
+                }}>
                 <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'24px',letterSpacing:'5px',color:'#07090C'}}>PLAY</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#07090C"><path d="M5 3l14 9-14 9V3z"/></svg>
               </button>
@@ -422,23 +434,21 @@ export default function HomeScreen({onStartGame, onHistory, username, onLogout})
               <button onClick={onHistory}
                 onMouseEnter={()=>setHov('hist')} onMouseLeave={()=>setHov(null)}
                 style={{width:'100%',height:'40px',borderRadius:'12px',
-                  border:`1.5px solid ${hov==='hist'?'rgba(255,255,255,0.18)':'rgba(255,255,255,0.08)'}`,
-                  background:'transparent',cursor:'pointer',
-                  color:hov==='hist'?'#fff':'#9EA7AE',
+                  border:`1.5px solid ${hov==='hist'?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.1)'}`,
+                  background:'rgba(255,255,255,0.04)',cursor:'pointer',
+                  color:hov==='hist'?'#fff':'rgba(255,255,255,0.5)',
                   fontSize:'12px',display:'flex',alignItems:'center',justifyContent:'center',gap:'7px',
-                  transition:'all 0.15s ease',fontFamily:"'Inter',sans-serif",
-                }}
-              >
+                  transition:'all 0.15s ease',fontFamily:"'Inter',sans-serif",backdropFilter:'blur(8px)',
+                }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 Match History
               </button>
 
               {/* Real last match stats */}
-              {loadingStats ? (
-                <div style={{padding:'14px',background:'rgba(22,29,34,0.6)',borderRadius:'12px',border:'1px solid rgba(255,255,255,0.05)',marginTop:'4px',color:'#6E7781',fontSize:'11px',textAlign:'center'}}>Loading stats...</div>
-              ) : (
-                <RecentStatsPanel stats={lastMatchStats}/>
-              )}
+              {loadingStats
+                ? <div style={{...glass({borderRadius:'12px'}),padding:'14px',marginTop:'4px',color:'rgba(255,255,255,0.3)',fontSize:'11px',textAlign:'center'}}>Loading stats...</div>
+                : <RecentStatsPanel stats={lastMatchStats}/>
+              }
             </div>
           </div>
         </div>
