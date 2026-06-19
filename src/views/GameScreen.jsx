@@ -203,7 +203,7 @@ function GameLogic({
 }
 
 // ── MAIN ──────────────────────────────────────────────────────────
-export default function GameScreen({ difficulty, matchId, onGameEnd }) {
+export default function GameScreen({ difficulty, matchId, username, onGameEnd }) {
   const ballRef    = useRef();
   const playerRef  = useRef();
   const botRef     = useRef();
@@ -272,7 +272,7 @@ export default function GameScreen({ difficulty, matchId, onGameEnd }) {
     fetch(`${API}/api/log-telemetry`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ match_id: matchId, difficulty, telemetry_events: telemetry.current }),
+      body: JSON.stringify({ user_id: username, match_id: matchId, difficulty, telemetry_events: telemetry.current }),
     }).catch(() => {});
   }, [matchId, difficulty, sfx]);
 

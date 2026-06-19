@@ -212,7 +212,7 @@ function StatsPanel() {
 }
 
 // ── MAIN ─────────────────────────────────────────────────────────
-export default function HomeScreen({ onStartGame, onHistory }) {
+export default function HomeScreen({ onStartGame, onHistory, username, onLogout }) {
   const [selected, setSelected] = useState('medium');
   const [hovered,  setHovered]  = useState(null);
 
@@ -327,9 +327,29 @@ export default function HomeScreen({ onStartGame, onHistory }) {
 
       {/* Bottom controls */}
       <div style={{textAlign:'center',paddingBottom:'14px',position:'relative',zIndex:2}}>
-        <p style={{color:'rgba(100,180,40,0.25)',fontSize:'9px',fontFamily:'monospace',letterSpacing:'3px',textTransform:'uppercase'}}>
+        <p style={{color:'rgba(100,180,40,0.25)',fontSize:'9px',fontFamily:'monospace',letterSpacing:'3px',textTransform:'uppercase',marginBottom:'8px'}}>
           Arrows Move · Space Serve · Shift Drive · Ctrl Dink · Q Lob · A/D Aim
         </p>
+        {/* Username badge + logout */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'12px'}}>
+          <span style={{color:'rgba(140,210,70,0.5)',fontSize:'10px',fontFamily:'monospace',letterSpacing:'2px'}}>
+            👤 {username}
+          </span>
+          <button onClick={onLogout} style={{
+            padding:'4px 10px',borderRadius:'8px',
+            border:'1px solid rgba(248,113,113,0.3)',
+            background:'rgba(248,113,113,0.08)',
+            color:'rgba(248,113,113,0.5)',
+            fontFamily:'monospace',fontSize:'9px',
+            letterSpacing:'2px',cursor:'pointer',
+            transition:'all 0.15s ease',
+          }}
+          onMouseEnter={e=>{e.target.style.color='rgba(248,113,113,0.9)';e.target.style.borderColor='rgba(248,113,113,0.6)';}}
+          onMouseLeave={e=>{e.target.style.color='rgba(248,113,113,0.5)';e.target.style.borderColor='rgba(248,113,113,0.3)';}}
+          >
+            LOGOUT
+          </button>
+        </div>
       </div>
     </div>
   );

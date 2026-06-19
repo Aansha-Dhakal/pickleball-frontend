@@ -1,14 +1,36 @@
-import { useState } from 'react';
-import HomeScreen from './views/HomeScreen';
-import GameScreen from './views/GameScreen';
+import { useState, useEffect } from 'react';
+import LoginScreen    from './views/LoginScreen';
+import HomeScreen     from './views/HomeScreen';
+import GameScreen     from './views/GameScreen';
 import DashboardScreen from './views/DashboardScreen';
-import HistoryScreen from './views/HistoryScreen';
+import HistoryScreen  from './views/HistoryScreen';
 
 export default function App() {
-  const [screen, setScreen] = useState('HOME');
-  const [matchTelemetry, setMatchTelemetry] = useState([]);
-  const [difficulty, setDifficulty] = useState('medium');
-  const [matchId, setMatchId] = useState(null);
+  const [screen,        setScreen]        = useState('LOGIN');
+  const [username,      setUsername]      = useState(null);
+  const [matchTelemetry,setMatchTelemetry]= useState([]);
+  const [difficulty,    setDifficulty]    = useState('medium');
+  const [matchId,       setMatchId]       = useState(null);
+
+  // Auto-login if username already saved
+  useEffect(() => {
+    const saved = localStorage.getItem('pkl_username');
+    if (saved) {
+      setUsername(saved);
+      setScreen('HOME');
+    }
+  }, []);
+
+  const handleLogin = (name) => {
+    setUsername(name);
+    setScreen('HOME');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('pkl_username');
+    setUsername(null);
+    setScreen('LOGIN');
+  };
 
   const handleStartGame = (selectedDifficulty) => {
     setDifficulty(selectedDifficulty);
@@ -28,7 +50,6 @@ export default function App() {
     setScreen('HOME');
   };
 
-  // Called from HistoryScreen when user clicks a past match
   const handleViewHistoryMatch = (telemetryData, histMatchId) => {
     setMatchTelemetry(telemetryData);
     setMatchId(histMatchId);
@@ -38,10 +59,16 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans">
 
+      {screen === 'LOGIN' && (
+        <LoginScreen onLogin={handleLogin} />
+      )}
+
       {screen === 'HOME' && (
         <HomeScreen
           onStartGame={handleStartGame}
           onHistory={() => setScreen('HISTORY')}
+          username={username}
+          onLogout={handleLogout}
         />
       )}
 
@@ -49,6 +76,7 @@ export default function App() {
         <GameScreen
           difficulty={difficulty}
           matchId={matchId}
+          username={username}
           onGameEnd={handleMatchComplete}
         />
       )}
@@ -63,7 +91,6 @@ export default function App() {
         />
       )}
 
-      {/* Dashboard loaded from history — no Play Again, just back to history */}
       {screen === 'DASHBOARD_HISTORY' && (
         <DashboardScreen
           data={matchTelemetry}
@@ -77,6 +104,7 @@ export default function App() {
 
       {screen === 'HISTORY' && (
         <HistoryScreen
+          username={username}
           onViewMatch={handleViewHistoryMatch}
           onBack={() => setScreen('HOME')}
         />
