@@ -96,17 +96,24 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       if (Math.abs(v.y) < 0.4) v.y = 0;
 
       // ── OUT OF BOUNDS on bounce ──
-      // Rule: score is determined by WHERE the ball bounced
-      // Ball bounced on AI side (z < 0) and out → PLAYER scores (you hit a winner)
-      // Ball bounced on player side (z > 0) and out → AI scores
       if (Math.abs(pos.x) > COURT_W / 2 + 0.15 || Math.abs(pos.z) > COURT_L / 2 + 0.15) {
         active.current = false;
-        if (pos.z <= 0) {
-          // Bounced on AI side and went out — PLAYER scores
-          onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+        if (Math.abs(pos.x) > COURT_W / 2 + 0.15) {
+          // Sideways out on bounce — whoever hit it last is responsible
+          if (lastStriker.current === 'PLAYER') {
+            onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
+          } else {
+            onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+          }
         } else {
-          // Bounced on player side and went out — AI scores
-          onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
+          // Past baseline on bounce — use which side it's on
+          if (pos.z <= 0) {
+            // Bounced on AI side and out past their baseline — player scores
+            onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+          } else {
+            // Bounced on player side and out past their baseline — AI scores
+            onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
+          }
         }
         prevY.current = pos.y;
         prevZ.current = pos.z;
@@ -136,24 +143,35 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
     }
 
     // ── BALL FLEW PAST BASELINE WITHOUT BOUNCING ──
-    // Use velocity direction to determine who missed:
-    // Ball moving toward AI (vz < 0) and past AI baseline = AI missed (player scores)
-    // Ball moving toward player (vz > 0) and past player baseline = player missed (AI scores)
+    // Ball past AI baseline mid-air = AI missed = player scores
+    // Ball past player baseline mid-air = player missed = AI scores
     if (pos.y > FLOOR_Y) {
       if (pos.z < -(COURT_L / 2 + 2)) {
         active.current = false;
-        // Ball flying toward AI side went past — AI couldn't return it, player scores
         onScore?.({ scorer: 'player', reason: 'MISSED_SHOT' });
-        prevY.current = pos.y;
-        prevZ.current = pos.z;
+        prevY.current = pos.y; prevZ.current = pos.z;
         return;
       }
       if (pos.z > COURT_L / 2 + 2) {
         active.current = false;
-        // Ball flying toward player side went past — player missed it, AI scores
         onScore?.({ scorer: 'ai', reason: 'MISSED_SHOT' });
-        prevY.current = pos.y;
-        prevZ.current = pos.z;
+        prevY.current = pos.y; prevZ.current = pos.z;
+        return;
+      }
+
+      // ── MID-AIR SIDEWAYS OUT ──
+      // Ball flew out past the sideline while still in the air
+      // Whoever hit it last is responsible — they hit it wide
+      if (Math.abs(pos.x) > COURT_W / 2 + 0.3) {
+        active.current = false;
+        if (lastStriker.current === 'PLAYER') {
+          // You hit it wide — AI scores
+          onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
+        } else {
+          // AI hit it wide — you score
+          onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+        }
+        prevY.current = pos.y; prevZ.current = pos.z;
         return;
       }
     }
