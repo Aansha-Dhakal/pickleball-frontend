@@ -43,8 +43,8 @@ function calcShot(playerPos, targetX, shotType, aimDepth = 'normal') {
 function FixedCamera() {
   const { camera } = useThree();
   useEffect(() => {
-    camera.position.set(0, 7, 11);
-    camera.lookAt(0, 0.5, -2);
+    camera.position.set(0, 5.5, 20);
+    camera.lookAt(0, 1, 0);
   }, [camera]);
   return null;
 }
@@ -352,7 +352,7 @@ export default function GameScreen({ difficulty, matchId, username, onGameEnd })
 
   const launchBall = useCallback((server) => {
     if (!ballRef.current) return;
-    if (server==='player') ballRef.current.launch({x:3,y:1.4,z:19},{x:-1.2,y:8.7,z:-28},'PLAYER');
+    if (server==='player') ballRef.current.launch({x:3,y:1.4,z:17},{x:-1.2,y:8.7,z:-28},'PLAYER');
     else ballRef.current.launch({x:-3,y:1.4,z:-19},{x:1.2,y:8.7,z:28},'AI');
     sfx.playHit(0.9);
     logTelemetry('SHOT',{striker:server==='player'?'PLAYER':'AI',shot_type:'SERVE'});
@@ -484,7 +484,7 @@ export default function GameScreen({ difficulty, matchId, username, onGameEnd })
       {/* ── 3D CANVAS ── */}
       <Canvas
         shadows={false}
-        camera={{ position:[0,7,11], fov:55, near:0.1, far:200 }}
+        camera={{ position:[0,5.5,20], fov:60, near:0.1, far:200 }}
         gl={{ antialias:true, alpha:false }}
         style={{ background:'#07090C' }}
       >
