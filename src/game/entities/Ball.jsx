@@ -180,13 +180,24 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
         prevY.current = pos.y; prevZ.current = pos.z;
         return;
       }
-      // Sideways mid-air — hitter hit it wide
+      // Sideways mid-air
       if (Math.abs(pos.x) > COURT_W / 2 + 0.3) {
         active.current = false;
-        if (lastStriker.current === 'PLAYER') {
-          onScore?.({ scorer: 'ai',    reason: 'OUT_OF_BOUNDS' });
+        if (bounceCount.current > 0) {
+          // Already bounced in bounds — ball out, side it's on loses
+          const losingSide = pos.z > 0 ? 'player' : 'ai';
+          if (losingSide === 'player') {
+            onScore?.({ scorer: 'ai',    reason: 'BALL_OUT' });
+          } else {
+            onScore?.({ scorer: 'player', reason: 'BALL_OUT' });
+          }
         } else {
-          onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+          // Never bounced — hitter hit it wide
+          if (lastStriker.current === 'PLAYER') {
+            onScore?.({ scorer: 'ai',    reason: 'OUT_OF_BOUNDS' });
+          } else {
+            onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
+          }
         }
         prevY.current = pos.y; prevZ.current = pos.z;
         return;
