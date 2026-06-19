@@ -110,21 +110,27 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       if (Math.abs(pos.x) > halfW + 0.15 || Math.abs(pos.z) > halfL + 0.15) {
         active.current = false;
 
-        // Use firstBounceSide — where did the ball FIRST land after the last hit?
-        // If it first bounced on AI side → ball landed in AI court → player wins rally
-        // If it first bounced on player side → ball landed in player court → AI wins rally
-        // If it never bounced (firstBounceSide still null) → use lastStriker (hitter responsible)
+        console.log('OOB ON BOUNCE:', {
+          pos_x: pos.x.toFixed(2),
+          pos_z: pos.z.toFixed(2),
+          bounceSide,
+          firstBounceSide: firstBounceSide.current,
+          lastStriker: lastStriker.current,
+          halfW, halfL,
+        });
+
         if (firstBounceSide.current === 'ai') {
-          // Ball landed on AI side first — player wins
+          console.log('→ PLAYER scores (bounced AI side)');
           onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
         } else if (firstBounceSide.current === 'player') {
-          // Ball landed on player side first — AI wins
+          console.log('→ AI scores (bounced player side)');
           onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
         } else {
-          // No bounce yet — hitter sent it directly out
           if (lastStriker.current === 'PLAYER') {
+            console.log('→ AI scores (player hit directly out)');
             onScore?.({ scorer: 'ai', reason: 'OUT_OF_BOUNDS' });
           } else {
+            console.log('→ PLAYER scores (AI hit directly out)');
             onScore?.({ scorer: 'player', reason: 'OUT_OF_BOUNDS' });
           }
         }
