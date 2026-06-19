@@ -126,13 +126,18 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
       }
 
       // ── VALID IN-BOUNDS BOUNCE ──
-      // The person who HIT the ball wins if it bounces in opponent's court
-      // Set rallyWinner = whoever hit the shot that just landed in bounds
       if (rallyWinner.current === null) {
-        // First bounce — set winner to whoever hit it here
-        // If lastStriker is PLAYER and ball lands on AI side (z<0) → player wins
-        // If lastStriker is AI and ball lands on player side (z>0) → AI wins
-        rallyWinner.current = lastStriker.current === 'PLAYER' ? 'player' : 'ai';
+        const landedSide = pos.z > 0 ? 'player' : 'ai';
+        // Ball landed on opponent's side = hitter wins
+        // Ball landed on own side = opponent wins
+        if (
+          (lastStriker.current === 'PLAYER' && landedSide === 'ai') ||
+          (lastStriker.current === 'AI'     && landedSide === 'player')
+        ) {
+          rallyWinner.current = lastStriker.current === 'PLAYER' ? 'player' : 'ai';
+        } else {
+          rallyWinner.current = lastStriker.current === 'PLAYER' ? 'ai' : 'player';
+        }
       }
 
       const side = pos.z > 0 ? 'player' : 'ai';
