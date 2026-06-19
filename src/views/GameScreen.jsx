@@ -43,8 +43,10 @@ function calcShot(playerPos, targetX, shotType, aimDepth = 'normal') {
 function FixedCamera() {
   const { camera } = useThree();
   useEffect(() => {
-    camera.position.set(0, 5.5, 20);
-    camera.lookAt(0, 1, 0);
+    camera.position.set(0, 8, 24);
+    camera.lookAt(0, 0, -4);
+    camera.fov = 65;
+    camera.updateProjectionMatrix();
   }, [camera]);
   return null;
 }
@@ -484,7 +486,7 @@ export default function GameScreen({ difficulty, matchId, username, onGameEnd })
       {/* ── 3D CANVAS ── */}
       <Canvas
         shadows={false}
-        camera={{ position:[0,5.5,20], fov:60, near:0.1, far:200 }}
+        camera={{ position:[0,8,24], fov:65, near:0.1, far:200 }}
         gl={{ antialias:true, alpha:false }}
         style={{ background:'#07090C' }}
       >
