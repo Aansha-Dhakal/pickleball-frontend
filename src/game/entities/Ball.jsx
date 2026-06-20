@@ -38,6 +38,9 @@ const Ball = forwardRef(function Ball({ onBounce, onFault, onScore }, ref) {
     hit(v, striker = 'PLAYER') {
       vel.current.set(v.x, v.y, v.z);
       lastStriker.current = striker;
+      // Reset bounceCount only if ball hasn't bounced yet this rally
+      // Once bounced, the rally outcome is already determined by landingSide
+      // Resetting here was causing mid-rally hits to lose the bounce record
       bounceCount.current = 0;
     },
     getPosition()    { return meshRef.current?.position.clone() ?? new THREE.Vector3(); },

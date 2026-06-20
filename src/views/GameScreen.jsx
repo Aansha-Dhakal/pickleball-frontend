@@ -10,7 +10,7 @@ import BallTrail from '../game/BallTrail';
 import useSoundEffects from '../data/useSoundEffects';
 
 const WINNING_SCORE = 11;
-const HIT_RANGE     = 2.6;
+const HIT_RANGE     = 1.8;
 const GRAVITY       = -18;
 const START_Y       = 1.2;
 const API = import.meta.env.VITE_API_URL || 'https://pickleball-backend-h86y.onrender.com';
@@ -175,9 +175,9 @@ function GameLogic({ ballRef, playerRef, botRef, keys, keyHoldTime, difficulty, 
       }
     }
 
-    // Player hit
+    // Player hit - only when ball is airborne (not rolling on floor)
     const pHit = new THREE.Vector3(playerPos.x, playerPos.y + 1.1, playerPos.z);
-    if (ballPos.distanceTo(pHit) < HIT_RANGE && ballPos.z > -2 && now - lastPlayerHit.current > HIT_COOLDOWN) {
+    if (ballPos.distanceTo(pHit) < HIT_RANGE && ballPos.z > -2 && ballPos.y > 0.3 && now - lastPlayerHit.current > HIT_COOLDOWN) {
       lastPlayerHit.current = now;
       playerRef.current.triggerSwing();
       if (playerRef.current.isInKitchen() && ballRef.current.getBounceCount() === 0) {
@@ -203,9 +203,9 @@ function GameLogic({ ballRef, playerRef, botRef, keys, keyHoldTime, difficulty, 
       onShot({ striker:'PLAYER', shotType, shot_type: inKitchenZone&&shotType!=='lob'?'DINK':shotType.toUpperCase(), position:ballPos.clone(), reaction_time_ms:Math.round((now-lastBotHit.current)*1000) });
     }
 
-    // Bot hit
+    // Bot hit - only when ball is airborne (not rolling on floor)
     const bHit = new THREE.Vector3(botPos.x, botPos.y + 1.1, botPos.z);
-    if (ballPos.distanceTo(bHit) < HIT_RANGE && ballPos.z < 2 && now - lastBotHit.current > HIT_COOLDOWN && !botHasHit.current) {
+    if (ballPos.distanceTo(bHit) < HIT_RANGE && ballPos.z < 2 && ballPos.y > 0.3 && now - lastBotHit.current > HIT_COOLDOWN && !botHasHit.current) {
       lastBotHit.current = now;
       botHasHit.current  = true;
       const botInKitchen = botPos.z > -KITCHEN_DEPTH && botPos.z < 0;
