@@ -43,9 +43,9 @@ function calcShot(playerPos, targetX, shotType, aimDepth = 'normal') {
 function FixedCamera() {
   const { camera } = useThree();
   useEffect(() => {
-    camera.position.set(0, 12, 28);
-    camera.lookAt(0, 0, -6);
-    camera.fov = 70;
+    camera.position.set(0, 6, 18);
+    camera.lookAt(0, 0.5, -2);
+    camera.fov = 75;
     camera.updateProjectionMatrix();
   }, [camera]);
   return null;
@@ -53,7 +53,6 @@ function FixedCamera() {
 
 // ── LOW-POLY ENVIRONMENT ──────────────────────────────────────────
 function Environment() {
-  // Pine tree
   const Tree = ({ pos, s = 1 }) => (
     <group position={pos} scale={[s, s, s]}>
       <mesh position={[0, 1.2, 0]}>
@@ -69,7 +68,6 @@ function Environment() {
     </group>
   );
 
-  // Simple building
   const Building = ({ pos, w = 4, h = 6, d = 3, color = '#1a1f2e' }) => (
     <mesh position={pos}>
       <boxGeometry args={[w, h, d]} />
@@ -77,7 +75,6 @@ function Environment() {
     </mesh>
   );
 
-  // Light pole
   const Pole = ({ x, z }) => (
     <group position={[x, 0, z]}>
       <mesh position={[0, 6, 0]}>
@@ -88,49 +85,50 @@ function Environment() {
         <boxGeometry args={[1.2, 0.3, 0.5]} />
         <meshStandardMaterial color="#1e293b" />
       </mesh>
-      <pointLight position={[0, 11.8, 0]} intensity={2.2} color="#fffbeb" distance={50} decay={1.4} />
+      <pointLight position={[0, 11.8, 0]} intensity={2.5} color="#fffbeb" distance={45} decay={1.4} />
       <mesh position={[0, 12.4, 0.3]}>
         <sphereGeometry args={[0.2, 8, 8]} />
-        <meshStandardMaterial color="#fef9c3" emissive="#fef9c3" emissiveIntensity={3} />
+        <meshStandardMaterial color="#fef9c3" emissive="#fef9c3" emissiveIntensity={4} />
       </mesh>
     </group>
   );
 
   return (
     <group>
-      {/* Ground */}
+      {/* Dark ground */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]} receiveShadow>
-        <planeGeometry args={[200, 200]} />
-        <meshStandardMaterial color="#0d1408" roughness={1} />
+        <planeGeometry args={[300, 300]} />
+        <meshStandardMaterial color="#060c06" roughness={1} />
       </mesh>
 
-      {/* Court surround */}
+      {/* Green surround — wide so sidelines show */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow>
-        <planeGeometry args={[38, 58]} />
-        <meshStandardMaterial color="#195B39" roughness={0.95} />
+        <planeGeometry args={[50, 70]} />
+        <meshStandardMaterial color="#0f2010" roughness={0.95} />
       </mesh>
 
-      {/* Light poles */}
-      <Pole x={-12} z={-18} />
-      <Pole x={ 12} z={-18} />
-      <Pole x={-12} z={ 18} />
-      <Pole x={ 12} z={ 18} />
+      {/* Light poles — same positions as reference */}
+      <Pole x={-13} z={-10} />
+      <Pole x={ 13} z={-10} />
+      <Pole x={-13} z={ 10} />
+      <Pole x={ 13} z={ 10} />
 
-      {/* Trees */}
-      {[[-24,0,-22],[-20,0,-28],[-28,0,-18],[22,0,-22],[26,0,-28],[20,0,-18],
-        [-24,0,20],[-20,0,26],[22,0,20],[26,0,26],[-28,0,8],[28,0,8]].map(([x,y,z],i) => (
-        <Tree key={i} pos={[x,y,z]} s={0.7 + (i%3)*0.2}/>
+      {/* Trees — flanking sides like reference */}
+      {[
+        [-20,0,-14],[-16,0,-20],[-22,0,-8],[-24,0,-18],
+        [ 20,0,-14],[ 16,0,-20],[ 22,0,-8],[ 24,0,-18],
+        [-18,0, 10],[ 18,0, 10],
+        [-20,0, 16],[ 20,0, 16],
+      ].map(([x,y,z],i) => (
+        <Tree key={i} pos={[x,y,z]} s={0.75 + (i%3)*0.2}/>
       ))}
 
-      {/* Buildings */}
-      <Building pos={[-36, 5, -30]} w={10} h={14} d={8} color="#12161e"/>
-      <Building pos={[36, 4, -28]}  w={8}  h={12} d={7} color="#0e1218"/>
-      <Building pos={[0, 3, -42]}   w={16} h={10} d={6} color="#14191f"/>
-      <Building pos={[-32, 3, 0]}   w={6}  h={8}  d={5} color="#11151c"/>
-      <Building pos={[32, 3, 0]}    w={6}  h={8}  d={5} color="#11151c"/>
+      {/* Buildings in background */}
+      <Building pos={[-26, 5, -22]} w={10} h={12} d={7} color="#12161e"/>
+      <Building pos={[ 26, 5, -22]} w={10} h={12} d={7} color="#0e1218"/>
+      <Building pos={[  0, 4, -30]} w={18} h={ 9} d={6} color="#14191f"/>
 
-      {/* Fog */}
-      <fog attach="fog" args={['#070d14', 35, 85]} />
+      <fog attach="fog" args={['#060c06', 28, 70]} />
     </group>
   );
 }
@@ -354,8 +352,8 @@ export default function GameScreen({ difficulty, matchId, username, onGameEnd })
 
   const launchBall = useCallback((server) => {
     if (!ballRef.current) return;
-    if (server==='player') ballRef.current.launch({x:3,y:1.4,z:18},{x:-1.2,y:8.7,z:-28},'PLAYER');
-    else ballRef.current.launch({x:-3,y:1.4,z:-19},{x:1.2,y:8.7,z:28},'AI');
+    if (server==='player') ballRef.current.launch({x:2,y:1.4,z:13},{x:-1.0,y:7.5,z:-24},'PLAYER');
+    else ballRef.current.launch({x:-2,y:1.4,z:-18},{x:1.0,y:7.5,z:24},'AI');
     sfx.playHit(0.9);
     logTelemetry('SHOT',{striker:server==='player'?'PLAYER':'AI',shot_type:'SERVE'});
     setGameActive(true); servingAnimRef.current=false; setServing(false);
@@ -486,7 +484,7 @@ export default function GameScreen({ difficulty, matchId, username, onGameEnd })
       {/* ── 3D CANVAS ── */}
       <Canvas
         shadows={false}
-        camera={{ position:[0,12,28], fov:70, near:0.1, far:200 }}
+        camera={{ position:[0,6,18], fov:75, near:0.1, far:200 }}
         gl={{ antialias:true, alpha:false }}
         style={{ background:'#07090C' }}
       >
