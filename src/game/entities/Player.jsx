@@ -6,7 +6,7 @@ import { COURT_W, COURT_L, KITCHEN_DEPTH } from '../Court';
 const PLAYER_SPEED = 12;
 const PADDLE_REACH = 1.2;
 const HIT_COOLDOWN = 0.4;
-const PLAYER_START_Z = 14;
+const PLAYER_START_Z = 16;
 
 // Serve animation states
 const SERVE_IDLE    = 'IDLE';
