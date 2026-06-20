@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import AppIcon from './AppIcon';
 
 const BG_SRC = "/backgroundpick.png";
 
@@ -13,43 +14,6 @@ const C = {
 };
 
 // SVG pickleball icon — perforated ball
-function PickleballIcon({ size = 64 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Outer glow */}
-      <circle cx="32" cy="32" r="30" fill={`${C.lime}18`}/>
-      {/* Ball body */}
-      <circle cx="32" cy="32" r="28" fill="url(#ballGrad)"/>
-      {/* Surface shading */}
-      <circle cx="32" cy="32" r="28" fill="url(#ballShade)"/>
-      {/* Highlight */}
-      <ellipse cx="24" cy="22" rx="8" ry="5" fill="rgba(255,255,255,0.18)" transform="rotate(-20 24 22)"/>
-      {/* Perforations — arranged in typical pickleball pattern */}
-      {[
-        [20,18],[32,14],[44,18],
-        [14,28],[26,24],[38,24],[50,28],
-        [20,36],[32,32],[44,36],
-        [14,44],[26,40],[38,40],[50,44],
-        [20,50],[32,46],[44,50],
-      ].map(([cx,cy],i) => (
-        <circle key={i} cx={cx} cy={cy} r="3.2" fill="rgba(0,0,0,0.35)"/>
-      ))}
-      {/* Rim */}
-      <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5"/>
-      <defs>
-        <radialGradient id="ballGrad" cx="38%" cy="32%" r="65%">
-          <stop offset="0%" stopColor="#d4f54e"/>
-          <stop offset="55%" stopColor="#B6FF2E"/>
-          <stop offset="100%" stopColor="#7ccc1a"/>
-        </radialGradient>
-        <radialGradient id="ballShade" cx="60%" cy="70%" r="60%">
-          <stop offset="0%" stopColor="rgba(0,0,0,0.18)"/>
-          <stop offset="100%" stopColor="transparent"/>
-        </radialGradient>
-      </defs>
-    </svg>
-  );
-}
 
 export default function LoginScreen({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -128,10 +92,10 @@ export default function LoginScreen({ onLogin }) {
         animation: 'fadeUp 0.5s ease both',
       }}>
 
-        {/* Ball icon — floating */}
+        {/* App icon — floating */}
         <div style={{ animation: 'float 3s ease-in-out infinite', marginBottom: '20px' }}>
-          <div style={{ filter: 'drop-shadow(0 8px 24px rgba(182,255,46,0.4))' }}>
-            <PickleballIcon size={72}/>
+          <div style={{ filter: 'drop-shadow(0 8px 24px rgba(74,222,128,0.45))' }}>
+            <AppIcon size={80}/>
           </div>
         </div>
 

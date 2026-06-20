@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import AppIcon from './AppIcon';
 
 const API = import.meta.env.VITE_API_URL || 'https://pickleball-backend-h86y.onrender.com';
 
@@ -265,7 +266,8 @@ export default function HistoryScreen({ username, onViewMatch, onBack }) {
         {/* ── HEADER ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px', animation: 'fadeUp 0.4s ease both' }}>
           <div>
-            <div style={{ color: C.lime, fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '6px', fontFamily: 'Inter,sans-serif' }}>
+            <div style={{ color: C.lime, fontSize: '11px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: '6px', fontFamily: 'Inter,sans-serif', display:'flex', alignItems:'center', gap:'8px' }}>
+              <AppIcon size={18}/>
               Match Archive
             </div>
             <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '48px', letterSpacing: '-0.02em', color: C.white, lineHeight: 1 }}>
